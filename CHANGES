@@ -1,3 +1,6 @@
+version 20070613_2
+Moved potoss development to Google Code.
+
 version 20070613_1
 Temporarily removed the js shortcuts becaused they caused all content to
 disappear in IE.  Whoops!!!  Added IE back into the selenium tests so
