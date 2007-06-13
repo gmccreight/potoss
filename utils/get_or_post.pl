@@ -10,7 +10,8 @@ use warnings;
 use HTTP::Request::Common;
 use LWP::Simple;
 
-my $site_url = "http://www.some_potoss_site.com";
+my $SITE_URL = "http://www.some_potoss_site.com";
+my $FILE_PREFIX = "pot_7898_";
 
 get_page("lwp_test");
 post_page("lwp_test");
@@ -18,19 +19,19 @@ post_page("lwp_test");
 sub get_page {
     my $page_name = shift;
     die "need page_name" if ! $page_name;
-    my $data = get("$site_url/PH_plain&nm_page=$page_name");
-    _write_file("pot_$page_name.txt", $data);
+    my $data = get("$SITE_URL/PH_plain&nm_page=$page_name");
+    _write_file("$FILE_PREFIX$page_name.txt", $data);
 }
 
 sub post_page {
     my $page_name = shift;
     die "need page_name" if ! $page_name;
-    my $filename = "pot_$page_name.txt";
+    my $filename = "$FILE_PREFIX$page_name.txt";
     die "file not found" if ! -e $filename;
     my $data = _read_file($filename);
     require LWP::UserAgent;
     my $ua = LWP::UserAgent->new;
-    my $response = $ua->request(POST '$site_url/?$page_name', [PH_page_submit => 1, nm_page => $page_name, nm_text => $data]);
+    my $response = $ua->request(POST '$SITE_URL/?$page_name', [PH_page_submit => 1, nm_page => $page_name, nm_text => $data]);
 
 #    if ($response->is_success) {
 #        print $response->content;
