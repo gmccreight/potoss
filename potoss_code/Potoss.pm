@@ -636,7 +636,7 @@ sub _clear_old_page_name_guesses {
     # trying more than one guess per minute.
     my @guesses_cleared = ();
 
-    require File::Find;
+    _compat_require_file_find();
 
     File::Find::find (sub {
         return if $_ !~ /^guess_/;
@@ -1256,11 +1256,11 @@ sub PH_page_opts {
             </div>
 
             <div style="margin-bottom:30px;"><strong>Free and Open Source Software</strong>
-                <p style="margin-left:20px;">All of the code which runs this site is free and open source software.  The bulk is licensed under the GPL v2.  Some of the modules are licensed under the UGPL or the more permissive Artistic license.</p>
+                <p style="margin-left:20px;">All of the code which runs this site is free and open source software.  The bulk is licensed under the GPLv2.  Some of the modules are licensed under the UGPL or the more permissive Artistic license.</p>
                 <p style="margin-left:20px;">The code will only work on UNIX type platforms.</p>
                 <p style="margin-left:20px;">I also include the Selenium browser tests for the site.</p>
-                <p style="margin-left:40px;">Here is the tar file of the current source code of the site: <a href="http://$conf{CNF_SITE_BASE_URL}/potoss.tgz">potoss.tgz</a></p>
-                <p style="margin-left:40px;">There is also a pageoftext page about the project, which includes information about the repository: <a href="http://www.pageoftext.com/potoss">www.pageoftext.com/potoss</a></p>
+                <p style="margin-left:40px;">It is hosted at: <a href="http://code.google.com/p/potoss/">http://code.google.com/p/potoss/</a></p>
+                <p style="margin-left:40px;">There is also a pageoftext page about the project, <a href="http://www.pageoftext.com/potoss">www.pageoftext.com/potoss</a></p>
             </div>
         </div>
     ~;
@@ -1959,7 +1959,8 @@ sub _test_num_pages {
 
     my $qr = shift || '';
 
-    require File::Find;
+    _compat_require_file_find();
+
     my $cnt = 0;
 
     File::Find::find (sub {
@@ -1979,8 +1980,9 @@ sub _test_num_fopts {
     my $qr = shift
         || die "need a regex for num of fopts";
 
-    require File::Find;
     my $cnt = 0;
+
+    _compat_require_file_find();
 
     File::Find::find (sub {
         return if $_ !~ /_FOPT_/;
@@ -2004,6 +2006,9 @@ sub _test_delete_page {
 
     # First, delete all the REV files, then the REVS folder.
     my $revs_dir = "$conf{CNF_TEXTS_DIR}/${page_name}_REVS";
+
+    _compat_require_file_find();
+
     File::Find::find (sub {
         unlink($_);
     }, $revs_dir);
@@ -2018,6 +2023,13 @@ sub _test_delete_page {
             unlink($_);
         }
     }, $conf{CNF_TEXTS_DIR});
+}
+
+sub _compat_require_file_find {
+    # [tag:compatibility] - we might want to allow for Win32 later,
+    # so use as few shell commands as possible.  So, require File::Find.
+    # Do this in a subroutine so we only have to put this note in one place.
+    require File::Find;
 }
 
 #TEMPLATE_ADD_PAGEOFTEXTCOM_SUBS
