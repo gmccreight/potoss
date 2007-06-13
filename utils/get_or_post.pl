@@ -42,6 +42,7 @@ sub post_page {
 }
 
 sub _read_file {
+    # [tag:easy_install] - We don't use File::Slurp to avoid prerequisites
     my $filename = shift;
     open(my $fh, "<", $filename)
         || die "Cannot read from file $filename - $!";
@@ -52,6 +53,7 @@ sub _read_file {
 }
 
 sub _write_file {
+    # [tag:easy_install] - We don't use File::Slurp to avoid prerequisites
     my $filename = shift;
     my $data = shift;
     open(my $fh, ">", $filename)
