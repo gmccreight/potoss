@@ -1,0 +1,161 @@
+version 20070613_1
+Temporarily removed the js shortcuts becaused they caused all content to
+disappear in IE.  Whoops!!!  Added IE back into the selenium tests so
+we'll catch that issue if it pops up again.
+
+version 20070611_1
+Added the PH_page_links URL, which shows all the links which originate
+and propogate from a page.
+
+version 20070610_3
+Added configurable sex (just a simple he/she) for the administrator.
+
+version 20070610_2
+Moved the get_or_put.pl file to "utils".  Added a link to take you to
+the latest, HEAD, revision of a page, like if you come in from an RSS feed which
+is pointing to an earlier revision.
+Added some notes about installation, though they are still a little patchy.
+
+version 20070610_1
+Added the ability to use keyboard shortcuts.  The first one is 'f',
+which brings up some page options when looking at the text.
+
+version 20070608_2
+Rearranged the advanced options a bit.  Added a note about double-clicking.
+  
+version 20070608_1
+* In configuration file:
+    ** Die instead of warning if missing data directories.
+    ** Uses a dot (for current directory) instead of ENV variable.
+* Changed the selenium test directory.  Ultimately it should be in the
+  configuration file as well, but for now it's not.
+* Added two #TEMPLATE_ notes to the code.  These allow Gordon to do
+  some simple code substitution required for pageoftext.com (adding a
+  couple simple subroutines of pageoftext.com specific material at
+  those locations)
+
+version 20070605_3
+Luke Closs removed hardcoded config path and added a check
+on the configured directories.  He also added a feature:
+double-click the page text to edit.
+
+version 20070605_2
+Added the code to automatically normalize the page's name when creating
+it.  So, if you try to create a page, "My dog is always hungry!", it
+will come back with a suggested name of "my_dog_is_always_hungry", rather
+than just giving you an error suggesting that you change it yourself.
+Added ~20 tests for in the class test and web tests.
+
+version 20070605_1
+Took Luke Closs's suggestion of adding the RSS feed icon to each page.
+
+version 20070531_1
+Added the ability to download a tgz of the page and all is options.
+
+version 20070530_4
+Updated the run_test_http_server.pl file to correctly run the
+standalone simple http server.
+
+version 20070530_3
+Added revision conflict detection.
+
+version 20070530_2
+A big restructure of the code and data files.
+
+version 20070530_1
+Added an HTTP::Server::Simple web server to the code.
+Also added simple get_or_post.pl script which is just in its
+infancy.  The idea is that you will be able to use pageoftext
+directly from a text editor.
+
+version 20070529_2
+Fixed a bug about not updating the linkable pages cache
+when a file option was updated.  Forgot to call:
+_calculate_linkable_pages_cache()
+
+version 20070529_1
+Fixed a bug where people were able to create pages which were
+the same as words in the dictionary.  Added several tests to make
+sure the bug stays fixed.
+
+version 20070527_2
+Added the URL command line option to not show the "Advanced Options".
+
+version 20070527_1
+Added the ability to override the color of the bar for better
+branding when embedding.  This required also changing the way
+page options worked just a little bit.
+
+version 20070525_2
+Added a backup folder for the page revisions because I toasted the
+data directory by accident.  This will be an additional layer of
+data safety.
+
+version 20070525_1
+Added a small performance tweak.  Removed whitespace from the printing
+of the html, so the page will take slightly less bandwidth.
+
+version 20070524_3
+For embedding you can now remove the container div, the branding, and
+the 'create a new page' link (all from the advanced options)
+
+version 20070524_2
+Updated the page options (fopts) code to make it much more easily extensible.
+Moved all the information into a hash, so you just need to add more items to
+the hash to give more page options.
+
+version 20070524_1
+BIG change.  Moved to a new text directory and normalized to an _[A-Z]
+for all the files associated with page_name.  Added an update script
+to version control as well.
+
+version 20070523_1
+Added a slew of new tests to the Potoss.t file, and a few new
+subroutines to the Potoss.pm file which the tests use to get data
+about the text files.
+
+version 20070522_4
+Removed the silly joke about adding a new "clock" instead of new page.
+The wikiclock is funny enough on its own.  It doesn't need any help.
+
+version 20070522_3
+Switched from "use"-ing to requiring as-needed.  This ought to
+help mitigate startup times.
+
+version 20070522_2
+Added a silly joke about adding a new "clock" instead of new page.
+(see gemhack 5 to remove)
+
+version 20070522_1
+Added the ability to have the text not be wrapped.
+If it's not wrapped, the decorative border disappears,
+since it's likely that the text will not fit within the the
+bounding box.
+
+version 20070521_2
+Added page HEAD revision caching, so it doesn't have to check
+all the files each time.
+
+version 20070521_1
+Switched to using directories for the revisions.  The directories
+are the page names followed by _REVS.
+
+version 20070516_2
+Started modularizing.  Added the Potoss.pm module and the start
+of an associated test suite.
+
+version 20070516_1
+Removed the dependency on File::Slurp by creating my own
+_read_file and _write_file subroutines.
+
+version 20070513
+Added the front-end support for page encryption.
+
+version 20070510
+Added the bulk of the blowfish support, but disabled it for now.
+There is still a bit of a mess about decrypting encoded characters.
+
+version 20070508
+Added the _slow_down_if_too_many_guesses() subroutine to slow down the
+site if some IP address is guessing too many names of pages in a 
+short period of time.

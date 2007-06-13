@@ -1,0 +1,5 @@
+[potoss_test_link_tree_a_branch_b_branch_b_leaf_a]
+
+[potoss_test_link_tree_a_branch_b] --circular reference
+
+[potoss_test_link_tree_a_base] --base reference

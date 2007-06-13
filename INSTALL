@@ -1,0 +1,24 @@
+---
+Installing POTOSS (The source of pageoftext.com)
+---
+
+For the moment, once you unpack the tarball, try running:
+perl ./index.cgi
+It will undoubtedly fail with some messages about missing Perl modules.
+You'll need to use the cpan shell to install a couple modules.  To do this,
+type:
+sudo cpan
+Once the cpan program is up and running, you can install the needed modules.
+
+Once the modules are installed, you should be able to set up Apache to
+launch the perl script.  See the PotConf.pm file in the potoss_code folder
+for an example of a working Apache configuration.
+
+Before starting to add data to your installation, you should go into the
+potoss_code directory and run:
+perl Potoss.t
+which will run a suite of tests on your installation to make sure that
+various things work.
+
+In the future, the plans are to include all the modules needed to make the
+potoss code run out of the box.  We're not there yet.

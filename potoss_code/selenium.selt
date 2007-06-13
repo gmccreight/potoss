@@ -1,0 +1,210 @@
+# run this file from within Cygwin (or on a 'real' Unix) using the
+# prove command line tool.  prove is a script, and is part of
+# the Test::Harness perl module.
+
+# I (Gordon) have added an alias to Cygwin to ease running this test
+# alias potoss='export POT_TEST_DIR=oss ; prove /cygdrive/i/potoss_alias/potoss_code/selenium.selt'
+
+# you will also need to install the Selenium Remote Control application
+
+use strict;
+use warnings;
+
+# Don't set the number of tests in the Test::More definition
+# rather, set them based on the number of browsers you'll be testing.
+# This is done automatically with the "plan" function call below.
+use Test::More;
+use Test::WWW::Selenium;
+
+my $NUM_TESTS_PER_BROWSER = 89;
+my $SELENIUM_SERVER_DIR =
+    qq~"C:\\Program Files\\selenium-remote-control-0.9.1_nightly\\server"~;
+
+my @BROWSERS = (
+    { name => 'firefox',  should_test => 1 },
+    { name => 'iexplore', should_test => 1 },
+    { name => 'opera', should_test => 0 }, # works, but gives a little popup error.
+);
+
+my @browsers_to_test = grep({$_->{should_test}} @BROWSERS);
+
+# automatically set the number of Test::More tests based on the
+# number of browsers you plan to test.
+plan( tests => $NUM_TESTS_PER_BROWSER * scalar(@browsers_to_test) );
+
+# start up the Selenium server in java
+# send STDERR to /dev/null so no 'clutter' messages appear in the console
+system qq~
+    cd $SELENIUM_SERVER_DIR ;
+    java -jar selenium-server.jar 2> /dev/null &
+~;
+
+sleep 4;
+
+my $sel = undef;
+
+my $test_dir = $ENV{POT_TEST_DIR}
+    || die "needs POT_TEST_DIR environmental variable set";
+
+my %test_for = (
+    potoss_dev => {
+        url   => 'www.potoss_dev.com', # you can set this in your HOSTS file
+        dir   => '/?',
+        texts => '/cygdrive/i/potoss_dev_alias/potoss_data/texts_8s73f9dv/',
+    },
+    #TEMPLATE_ADD_EXTRA_SELENIUM_TEST_DIRS
+);
+
+my $url = $test_for{$test_dir}->{url} || die "need url for test_dir";
+my $dir = $test_for{$test_dir}->{dir}  || die "need dir for test_dir";
+my $texts_dir = $test_for{$test_dir}->{texts} || die "need texts for test_dir";
+
+BROWSER:
+for my $browser (@browsers_to_test) {
+
+    $sel = Test::WWW::Selenium->new(
+        host        => "localhost",
+        port        => 4444,
+        browser     => "*$browser->{name}",
+        browser_url => "http://$url/",
+    );
+
+
+    $sel->open_ok("${dir}potoss_saved_test");
+    loads_ok();
+    $sel->is_text_present_ok("edit this page");
+    $sel->is_text_present_ok("this is change 11");
+
+
+
+    $sel->click_ok("link=advanced options");
+    loads_ok();
+    $sel->click_ok("link=show the page's revision history");
+    loads_ok();
+    $sel->click_ok("link=compare two revisions");
+    loads_ok();
+    $sel->click_ok("link=start at revision 9");
+    loads_ok();
+    $sel->click_ok("link=end at revision 10");
+    loads_ok();
+    $sel->is_text_present_ok("this is change 10");
+
+
+
+    $sel->open_ok("${dir}potoss_wow"); #read only alias for potoss_saved_test
+    loads_ok();
+    $sel->is_text_present_ok("read only");
+    $sel->is_text_present_ok("this is change 11");
+
+    $sel->open_ok("${dir}PH_edit&nm_page=potoss_wow");
+    loads_ok();
+    $sel->is_text_present_ok("You can't edit this page");
+
+    $sel->open_ok("${dir}PH_page_opts&nm_page=potoss_wow");
+    loads_ok();
+    $sel->is_text_present_ok("You can't view this page's options");
+
+    $sel->open_ok("${dir}potoss_tmp_test");
+    loads_ok();
+    $sel->is_text_present_ok("This page doesn't exist");
+    $sel->click_ok("link=create it as a new page");
+    loads_ok();
+    $sel->click_ok("id=myel_new_page");
+    loads_ok();
+    $sel->is_text_present_ok("edit this page");
+    $sel->click_ok("link=edit this page");
+    loads_ok();
+    $sel->is_text_present_ok("This message only appears the first time you edit a page");
+    $sel->type_ok("myel_text_area", "This is some text.");
+    $sel->click_ok("nm_submit");
+    loads_ok();
+    $sel->is_text_present_ok("This is some text");
+    $sel->click_ok("link=edit this page");
+    loads_ok();
+    $sel->type_ok("myel_text_area", "This is some text.\nThis is even more text.");
+    $sel->click_ok("nm_submit");
+    loads_ok();
+    $sel->is_text_present_ok("This is even more text");
+    $sel->click_ok("link=advanced options");
+    loads_ok();
+    $sel->click_ok("link=show the page's revision history");
+    loads_ok();
+    $sel->is_text_present_ok("view revision 2");
+
+    `cd $texts_dir ; rm -r potoss_tmp_test_REVS ; rm potoss_tmp_test*`;
+
+    #-------------------------------------------------------------------------
+    # Story:
+    # When there is only a single revision, a message appears when you try
+    # to look at the revisions.
+
+    $sel->open_ok("${dir}potoss_tmp_test");
+    loads_ok();
+    $sel->is_text_present_ok("This page doesn't exist");
+    $sel->click_ok("link=create it as a new page");
+    loads_ok();
+    $sel->click_ok("id=myel_new_page");
+    loads_ok();
+    $sel->is_text_present_ok("edit this page");
+    $sel->click_ok("link=edit this page");
+    loads_ok();
+    $sel->is_text_present_ok("This message only appears the first time you edit a page");
+    $sel->type_ok("myel_text_area", "This is some text.");
+    $sel->click_ok("nm_submit");
+    loads_ok();
+    $sel->click_ok("link=advanced options");
+    loads_ok();
+    $sel->click_ok("link=show the page's revision history");
+    loads_ok();
+    $sel->is_text_present_ok("There is currently only one revision");
+
+    `cd $texts_dir ; rm -r potoss_tmp_test_REVS ; rm potoss_tmp_test*`;
+
+    #-------------------------------------------------------------------------
+    # Story:
+    # Try to create a page name which is in the dictionary
+    $sel->open_ok("${dir}PH_create");
+    $sel->is_text_present_ok("like the page name");
+    $sel->type_ok("myel_page_name", "queen");
+    $sel->click_ok("nm_submit");
+    loads_ok();
+    $sel->is_text_present_ok("is in the dictionary");
+
+    #-------------------------------------------------------------------------
+    # Story:
+    # Try to create a page which already exists
+    $sel->open_ok("${dir}PH_create");
+    $sel->is_text_present_ok("like the page name");
+    $sel->type_ok("myel_page_name", "potoss_saved_test");
+    $sel->click_ok("nm_submit");
+    loads_ok();
+    $sel->is_text_present_ok("that one already exists");
+
+    #-------------------------------------------------------------------------
+    # Story:
+    # Try to create a wrong page name.  It will automatically suggest a
+    # better one.
+    $sel->open_ok("${dir}PH_create");
+    $sel->is_text_present_ok("like the page name");
+    $sel->type_ok("myel_page_name", "My dog is always hungry!");
+    $sel->click_ok("nm_submit");
+    loads_ok();
+    $sel->is_text_present_ok("changed the page name to");
+    $sel->is_text_present_ok("my_dog_is_always_hungry");
+
+    sleep 2; #see what happened in the browser window before you close it.
+    $sel->stop();
+
+}
+
+# If there is still an sel object, then send the Remote Control the command
+# to shutDown, which will cause the Java process to end.  This is not
+# documented directly in the Test::WWW::Selenium documentation, but the
+# shutDown command is shown in the Selenium Remote Control documentation.
+$sel && $sel->do_command("shutDown");
+
+sub loads_ok {
+    # this is called so often that it should be a subroutine
+    # with a cleaner name and a variable you can change in one place.
+    $sel->wait_for_page_to_load_ok('30000', 'page loads in less than 30000');
+}
