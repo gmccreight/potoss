@@ -16,7 +16,7 @@ use warnings;
 use Test::More;
 use Test::WWW::Selenium;
 
-my $NUM_TESTS_PER_BROWSER = 111;
+my $NUM_TESTS_PER_BROWSER = 113;
 my $SELENIUM_SERVER_DIR =
     qq~"C:\\Program Files\\selenium-remote-control-0.9.1_nightly\\server"~;
 
@@ -198,6 +198,7 @@ for my $browser (@browsers_to_test) {
 
     $sel->open_ok("${dir}potoss_test_encryption_a");
     $sel->is_text_present_ok("Here is some unencrypted content.");
+    $sel->is_text_present_ok("Less than < and greater than > and ampersand & and question mark ?");
     $sel->click_ok("link=advanced options");
     loads_ok();
     $sel->click_ok("link=very advanced");
@@ -212,6 +213,7 @@ for my $browser (@browsers_to_test) {
     $sel->is_text_present_ok("34B6A58B7C40BE0C53ABF49FD68F22570A6F");
     $sel->click_ok("link=decrypt");
     $sel->is_text_present_ok("Here is some unencrypted content.");
+    $sel->is_text_present_ok("Less than < and greater than > and ampersand & and question mark ?");
     $sel->click_ok("link=advanced options");
     loads_ok();
     $sel->click_ok("link=very advanced");

@@ -1,3 +1,6 @@
+version 20070614_3
+You can now encrypt and decrypt multiple line pages.
+
 version 20070614_2
 Made a small post-decryption addition to the Blowfish code to strip
 the block cipher padding.

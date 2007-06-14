@@ -1803,9 +1803,18 @@ sub hprint {
                         }
                     }
                     else {
-                        var plaintext = (tarea)
-                            ? bf.decrypt(tarea.value)
-                            : bf.decrypt(textp.innerHTML);
+                        var plaintext = '';
+
+                        if (tarea) {
+                            plaintext = bf.decrypt(tarea.value);
+                        }
+                        else {
+                            //It could be a long, wrapped, ciphertext, so remove the <br>s
+                            var ciphertext = textp.innerHTML;
+                            ciphertext = ciphertext.replace(/<br>/ig, "");
+                            plaintext = bf.decrypt(ciphertext);
+                            plaintext = plaintext.replace(/\\n/g, "<br>");
+                        }
 
                         // After decryption there may be some padding characters.
                         // Strip them.
