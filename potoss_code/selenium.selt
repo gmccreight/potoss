@@ -16,7 +16,7 @@ use warnings;
 use Test::More;
 use Test::WWW::Selenium;
 
-my $NUM_TESTS_PER_BROWSER = 89;
+my $NUM_TESTS_PER_BROWSER = 111;
 my $SELENIUM_SERVER_DIR =
     qq~"C:\\Program Files\\selenium-remote-control-0.9.1_nightly\\server"~;
 
@@ -191,6 +191,33 @@ for my $browser (@browsers_to_test) {
     loads_ok();
     $sel->is_text_present_ok("changed the page name to");
     $sel->is_text_present_ok("my_dog_is_always_hungry");
+
+    #-------------------------------------------------------------------------
+    # Story:
+    # A user wants to encrypt and decrypt their page content.
+
+    $sel->open_ok("${dir}potoss_test_encryption_a");
+    $sel->is_text_present_ok("Here is some unencrypted content.");
+    $sel->click_ok("link=advanced options");
+    loads_ok();
+    $sel->click_ok("link=very advanced");
+    loads_ok();
+    $sel->click_ok("link=show the encryption buttons");
+    loads_ok();
+    $sel->click_ok("link=go back to the page");
+    loads_ok();
+    $sel->is_text_present_ok("Here is some unencrypted content.");
+    $sel->type_ok("myel_blowfish_key", "asimplekey");
+    $sel->click_ok("link=encrypt");
+    $sel->is_text_present_ok("34B6A58B7C40BE0C53ABF49FD68F22570A6F");
+    $sel->click_ok("link=decrypt");
+    $sel->is_text_present_ok("Here is some unencrypted content.");
+    $sel->click_ok("link=advanced options");
+    loads_ok();
+    $sel->click_ok("link=very advanced");
+    loads_ok();
+    $sel->click_ok("link=hide the encryption buttons");
+    loads_ok();
 
     sleep 2; #see what happened in the browser window before you close it.
     $sel->stop();
