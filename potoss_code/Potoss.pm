@@ -1200,7 +1200,7 @@ sub PH_page_opts {
 
     $text_for_level{very} = qq~
             <div style="margin-bottom:30px;"><strong>Keyboard Shortcuts</strong>
-                <p style="margin-left:20px;">the 'f' key brings up some page options when viewing the text.</p>
+                <p style="margin-left:20px;">the 'w' key brings up some page options when viewing the text.</p>
             </div>
 
             <div style="margin-bottom:30px;"><strong>Multiple pages in a single RSS feed</strong>
@@ -1767,8 +1767,15 @@ sub hprint {
     }
 
     if ($arg_ref->{add_blowfish_js}) {
+
+        # [tag:compatibility]
+        # gemhack 5 - If you change the following to be XMTML, it will fail
+        # in Internet Explorer 7 for some odd reason.  Don't do it!
+        my $do_not_change_formatting_of_script_include = qq~
+            <script src="./static/blowfish.js" type="text/javascript"></script>
+        ~;
+
         $maybe_blowfish_js = qq~
-            
             <script type="text/javascript" language="javascript">
                 function do_blowfish (x_sMode, x_sKey) {
 
@@ -1805,19 +1812,27 @@ sub hprint {
                     }
                 }
             </script>
-            <script src="./static/blowfish.js" type="text/javascript" />
+            $do_not_change_formatting_of_script_include
         ~;
     }
 
     my $maybe_keys_palette_div = "";
     if ($arg_ref->{add_keys_js}) {
+
+        # [tag:compatibility]
+        # gemhack 5 - If you change the following to be XMTML, it will fail
+        # in Internet Explorer 7 for some odd reason.  Don't do it!
+        my $do_not_change_formatting_of_script_include = qq~
+            <script src="./static/keys2.js" type="text/javascript"></script>
+        ~;
+
         $maybe_keys_js = qq~
             <script type="text/javascript" language="javascript">
                 function get_pagename () {
                     return "$arg_ref->{page_name}";
                 }
             </script>
-            <script src="./static/keys.js" type="text/javascript" />
+            $do_not_change_formatting_of_script_include
         ~;
         $maybe_keys_palette_div = qq~<div id="myel_keys_palette" style="position:absolute;top:40px;left:-1000px;background-color:#eee;padding:2px;">&nbsp;</div>~;
     }
@@ -1880,11 +1895,6 @@ sub hprint {
     </body>
 </html>
     ~;
-
-
-    # gemhack 5 - the keys js causes IE to now show any content!!!
-    # turning it off for now, but will try to add back later.
-    $maybe_keys_js = '';
 
     if ($arg_ref->{stylesheet_only}) {
         filter_print(qq~$document_start

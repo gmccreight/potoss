@@ -25,7 +25,7 @@ function myKeyDown(e){
   var mykey = String.fromCharCode(mykey).toLowerCase();
 
   switch(mykey) {
-    case 'f':
+    case 'w':
       // f is easy to reach, and most people are right handed, so they can
       // use it with their finger on the mouse.
       var key_palette = document.getElementById('myel_keys_palette');

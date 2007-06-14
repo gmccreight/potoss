@@ -219,6 +219,10 @@ for my $browser (@browsers_to_test) {
     $sel->click_ok("link=hide the encryption buttons");
     loads_ok();
 
+    #-------------------------------------------------------------------------
+    # Story:
+    # [tag:todo] - How do we test keyboard shortcuts?    
+
     sleep 2; #see what happened in the browser window before you close it.
     $sel->stop();
 
