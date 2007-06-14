@@ -1,3 +1,7 @@
+version 20070614_2
+Made a small post-decryption addition to the Blowfish code to strip
+the block cipher padding.
+
 version 20070614_1
 Fixed an Internet Explorer bug where it can't handle XHTML formatted script
 elements.  Since that's fixed, I re-added the keyboard shortcuts, but
@@ -21,8 +25,8 @@ Added configurable sex (just a simple he/she) for the administrator.
 
 version 20070610_2
 Moved the get_or_put.pl file to "utils".  Added a link to take you to
-the latest, HEAD, revision of a page, like if you come in from an RSS feed which
-is pointing to an earlier revision.
+the latest, HEAD, revision of a page, like if you come in from an RSS feed
+which is pointing to an earlier revision.
 Added some notes about installation, though they are still a little patchy.
 
 version 20070610_1

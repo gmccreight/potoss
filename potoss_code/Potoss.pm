@@ -1803,12 +1803,21 @@ sub hprint {
                         }
                     }
                     else {
-                        if (tarea) {
-                            tarea.value = bf.decrypt(tarea.value);
+                        var plaintext = (tarea)
+                            ? bf.decrypt(tarea.value)
+                            : bf.decrypt(textp.innerHTML);
+
+                        // After decryption there may be some padding characters.
+                        // Strip them.
+                        for(j=0;j<7;j++){
+                            if (plaintext.charCodeAt(plaintext.length - 1) == 0) {
+                                plaintext = plaintext.substr(0, plaintext.length - 1);
+                            }
                         }
-                        else {
-                            textp.innerHTML = bf.decrypt(textp.innerHTML);
-                        }
+
+                        (tarea)
+                            ? tarea.value = plaintext
+                            : textp.innerHTML = plaintext;
                     }
                 }
             </script>
