@@ -1,3 +1,9 @@
+version 20070614_1
+Fixed an Internet Explorer bug where it can't handle XHTML formatted script
+elements.  Since that's fixed, I re-added the keyboard shortcuts, but
+changed the key to w, since f was a bad key (it's used in the CTRL-f
+for "find" key combo).
+
 version 20070613_2
 Moved potoss development to Google Code.
 
