@@ -1,4 +1,9 @@
 version 20070615_2
+Updated the links search page to allow for sorting based on
+different criteria, such as modified time, so it acts like a recent
+changes page.
+
+version 20070615_2
 Made the search case-insensitive
 
 version 20070615_1

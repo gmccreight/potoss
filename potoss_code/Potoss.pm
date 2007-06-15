@@ -363,6 +363,7 @@ sub PH_page_links {
     my $page_name = $cgi->param('nm_page');
     my $max_depth = $cgi->param('nm_max_depth') || 10;
     my $search_query = $cgi->param('nm_search_query') || '';
+    my $sort_by = $cgi->param('nm_sort_by') || 'order';
 
     #untaint the search query
     $search_query .= '';
@@ -377,8 +378,10 @@ sub PH_page_links {
     my $num_pages_match_search = 0;
     my $rows = "";
 
+    @links = sort {$a->{$sort_by} <=> $b->{$sort_by}} @links;
+
     PAGE:
-    for my $page (sort {$a->{order} <=> $b->{order}} @links) {
+    for my $page (@links) {
         my $warning = '';
         $warning .= "loops back" if $page->{is_circular};
 
@@ -425,7 +428,7 @@ sub PH_page_links {
         $rows .= qq~
             <tr>
                 <td style="padding:4px;">$indenting <a href="./?$page_name">$page_name$warning</a></td>
-                <td style="padding:4px;">&nbsp;</td>
+                <td style="padding:4px;">$page->{modified}</td>
             </tr>
         ~;
     }
@@ -434,9 +437,25 @@ sub PH_page_links {
         ? "<h3>$num_pages_match_search pages found for search</h3>"
         : '';
 
+    my @headings = (
+        {title => "page", sort_by => "order"},
+        {title => "days old", sort_by => "modified"},
+    );
+
+    my $heading_str = '';
+    for my $heading (@headings) {
+
+        my $style = ($heading->{sort_by} eq $sort_by)
+            ? qq~style="background-color:#fee;padding:2px;"~
+            : '';
+
+        my $url = qq~./?PH_page_links&nm_page=$page_name&nm_search_query=$search_query&nm_max_depth=$max_depth&nm_sort_by=~;
+        $heading_str .= qq~<th><a href="$url$heading->{sort_by}"$style>$heading->{title}</a></th>~;
+    }
+
     my $results_table = qq~
         <table>
-            <tr><th>page</th><th>&nbsp;</th></tr>
+            <tr>$heading_str</tr>
             $rows
         </table>
     ~;
@@ -451,6 +470,7 @@ sub PH_page_links {
         <form id="fr_search_links" method="post" action="./?" style="margin-bottom:20px;">
             <input type="hidden" name="PH_page_links" value="1">
             <input type="hidden" name="nm_page" value="$page_name">
+            <input type="hidden" name="nm_sort_by" value="$sort_by">
             search page contents for: <input type="text" name="nm_search_query" value="$search_query" style="width:200px;margin-right:20px;">
             max_depth: <input type="text" name="nm_max_depth" value="$max_depth" style="width:30px;margin-right:20px;">
             <input type="submit" name="nm_submit" value="search" class="form">
