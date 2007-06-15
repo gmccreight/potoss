@@ -361,7 +361,11 @@ sub _wrap_text {
 
 sub PH_page_links {
     my $page_name = $cgi->param('nm_page');
-    my $max_depth = $cgi->param('nm_max_depth') || 100;
+    my $max_depth = $cgi->param('nm_max_depth') || 10;
+    my $search_query = $cgi->param('nm_search_query') || '';
+
+    #untaint the search query
+    $search_query .= '';
 
     my $error = _check_page_name_is_ok($page_name);
     throw($error) if $error ne 'ok';
@@ -370,6 +374,7 @@ sub PH_page_links {
 
     throw($@) if $@;
 
+    my $num_pages_match_search = 0;
     my $rows = "";
 
     PAGE:
@@ -382,23 +387,70 @@ sub PH_page_links {
             : '';
 
         my $page_name = $page->{page_name};
-        my $left = $page->{depth} * 10;
+
+        if ($search_query) {
+            my $filename = get_filename_for_revision($page_name, "HEAD");
+
+            if (! -e $filename) {
+                page_does_not_exist($page_name);
+                return;
+            }
+            
+            my $page_data = _read_file($filename);
+            if ($page_data !~ m{$search_query}) {
+                next PAGE;
+            }
+
+            $num_pages_match_search++;
+        }
+
+        my @colors = qw(eee ddd ccc bbb aaa 999);
+        my $indenting = '';
+
+        DEEPNESS:
+        for my $deepness (0..$page->{depth}) {
+            next DEEPNESS if $deepness == 0;
+            my $color = ($deepness <= 5)
+                ? $colors[$deepness]
+                : $colors[5];
+
+            $indenting .= qq~<span style="background-color:#$color">&nbsp;&nbsp;&nbsp;</span>~;
+        }
+
         $rows .= qq~
             <tr>
-                <td style="padding:4px;"><a href="./?$page_name" style="margin-left:${left}px">$page_name$warning</a></td>
-                <td style="padding:4px;"><a href="./?PH_page_links&nm_page=$page_name">links for</td>
+                <td style="padding:4px;">$indenting <a href="./?$page_name">$page_name$warning</a></td>
+                <td style="padding:4px;">&nbsp;</td>
             </tr>
         ~;
     }
 
-    my $body = qq~
-        <div style="color:red;">Temporary</div>
-        <h4>Links for: $page_name</h4>
-        <a href="./?$page_name">show the page</a>
+    my $maybe_search_results = ($search_query)
+        ? "<h3>$num_pages_match_search pages found for search</h3>"
+        : '';
+
+    my $results_table = qq~
         <table>
-            <tr><th>page</th><th>links</th></tr>
+            <tr><th>page</th><th>&nbsp;</th></tr>
             $rows
         </table>
+    ~;
+
+    $results_table = ($search_query && $num_pages_match_search == 0)
+        ? qq~<span style="color:red;">No matching results</span>~
+        : $results_table;
+
+    my $body = qq~
+        <h4>Links for: <a href="./?$page_name">$page_name</a></h4>
+        $maybe_search_results
+        <form id="fr_search_links" method="post" action="./?" style="margin-bottom:20px;">
+            <input type="hidden" name="PH_page_links" value="1">
+            <input type="hidden" name="nm_page" value="$page_name">
+            search page contents for: <input type="text" name="nm_search_query" value="$search_query" style="width:200px;margin-right:20px;">
+            max_depth: <input type="text" name="nm_max_depth" value="$max_depth" style="width:30px;margin-right:20px;">
+            <input type="submit" name="nm_submit" value="search" class="form">
+        </form>
+        $results_table
     ~;
     hprint($body);
 }
