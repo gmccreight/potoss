@@ -361,20 +361,31 @@ sub _wrap_text {
 
 sub PH_page_links {
     my $page_name = $cgi->param('nm_page');
+    my $max_depth = $cgi->param('nm_max_depth') || 100;
 
     my $error = _check_page_name_is_ok($page_name);
     throw($error) if $error ne 'ok';
 
-    my @links = eval { page_get_links($page_name, {}, {max_depth => 100, mode => 'real', sorted => 1}) };
+    my @links = eval { page_get_links($page_name, [], {max_depth => $max_depth, mode => 'real'}) };
 
     throw($@) if $@;
 
     my $rows = "";
 
-    for my $page_name (@links) {
+    PAGE:
+    for my $page (sort {$a->{order} <=> $b->{order}} @links) {
+        my $warning = '';
+        $warning .= "loops back" if $page->{is_circular};
+
+        $warning = ($warning)
+            ? qq~ <span style="color:red;">$warning</span>~
+            : '';
+
+        my $page_name = $page->{page_name};
+        my $left = $page->{depth} * 10;
         $rows .= qq~
             <tr>
-                <td style="padding:4px;"><a href="./?$page_name">$page_name</a></td>
+                <td style="padding:4px;"><a href="./?$page_name" style="margin-left:${left}px">$page_name$warning</a></td>
                 <td style="padding:4px;"><a href="./?PH_page_links&nm_page=$page_name">links for</td>
             </tr>
         ~;
@@ -394,7 +405,7 @@ sub PH_page_links {
 
 sub page_get_links {
     my $page_name = shift;
-    my $already_seen = shift;
+    my $found_pages = shift || [];
     my $arg_ref = shift;
 
     my $error = _check_page_name_is_ok($page_name);
@@ -405,61 +416,82 @@ sub page_get_links {
 
     die "cached not yet supported" if $arg_ref->{mode} eq 'cached';
 
-    $arg_ref->{current_depth} = $arg_ref->{current_depth} || 0;
-    $arg_ref->{current_depth}++;
-
     my $resolved_alias = _is_page_alias_for($page_name);
     my $resolved_page_name = $resolved_alias || $page_name;
 
-    if ($arg_ref->{current_depth} == 1){ 
+    if (! $arg_ref->{depth}){ 
         die qq~page "$resolved_page_name" does not have linking enabled~
             if ! page_fopt($resolved_page_name, 'exists', 'has_linking');
 
         $arg_ref->{initial_page_name} = $page_name;
-
-        $arg_ref->{already_seen} = {};
-        $arg_ref->{already_seen}->{$page_name} = 1;
+        $arg_ref->{depth} = 0;
+        $arg_ref->{parent} = '';
+        $arg_ref->{is_circular} = 0;
 
         # gemhack 4 - this calculation should happen only once after alias
         # creation.  For now we don't have a central alias creation (or
         # deletion) subroutine, so just put it in here as a catch all.
         _calculate_alias_pages_cache();
     }
-    else {
-        $arg_ref->{already_seen}->{$page_name} = 1;
+
+    my $filename = get_filename_for_revision($page_name, "HEAD");
+    my $modified = -M $filename;
+
+    my $page_count = 1;
+    for my $page (@$found_pages) {
+        if ($page->{page_name} eq $page_name) {
+            $page_count++;
+        }
     }
+
+    # If you're not the base page...
+    if ( $arg_ref->{depth} > 0 ) {
+        push @$found_pages, {
+            page_name => $page_name,
+            page_count => $page_count,
+            is_circular => $arg_ref->{is_circular},
+            parent    => $arg_ref->{parent},
+            depth    => $arg_ref->{depth},
+            order     => scalar( @$found_pages ),
+            modified     => $modified,
+        };
+    }
+
+    return if $arg_ref->{is_circular};
 
     my @alias_pages = _get_alias_pages();
     my @linkable_pages = _get_linkable_pages();
 
-    my $filename = get_filename_for_revision($resolved_page_name, "HEAD");
     my $page_data = _read_file($filename) || "";
     my %these_are_not_links = ();
     my %these_are_links = ();
     $page_data =~ s{(\[[a-z_0-9]{5,}\])}{_regex_process_words_for_links($1, \@linkable_pages, \@alias_pages, \%these_are_not_links, \%these_are_links)}ges;
 
     my @links = ($arg_ref->{sorted}) ? sort keys %these_are_links : keys %these_are_links;
-    if ($arg_ref->{current_depth} < $arg_ref->{max_depth}) {
+    if ($arg_ref->{depth} < $arg_ref->{max_depth}) {
         my @deeper_links = ();
 
         LINK:
         for my $link_page_name (sort keys %these_are_links) {
-            next LINK if $arg_ref->{already_seen}->{$link_page_name};
             my %arg_ref_copy = %{$arg_ref};
-            push @deeper_links, page_get_links($link_page_name, $arg_ref->{already_seen}, \%arg_ref_copy);
+
+            for my $page ( @$found_pages ) {
+                if ($page->{page_name} eq $link_page_name) {
+                    $arg_ref_copy{is_circular} = 1;
+                }
+            }
+            $arg_ref_copy{parent} = $page_name;
+            $arg_ref_copy{depth} = $arg_ref->{depth} + 1;
+            push @deeper_links, page_get_links($link_page_name, $found_pages, \%arg_ref_copy);
         }
         push @links, @deeper_links;
     }
 
-    #remove duplicates and the start page;
-    my %unique_links = ();
-    for my $page_name (@links) {
-        if ($page_name ne $arg_ref->{initial_page_name}) {
-            $unique_links{$page_name}++;
-        }
+    # If you're at the top level, then you've already processed all the
+    # other levels, so return the results.
+    if ( $arg_ref->{depth} == 0 ) {
+        return @$found_pages;
     }
-    ($arg_ref->{sorted}) ? return sort keys %unique_links : return keys %unique_links;
-
 }
 
 sub show_page {
