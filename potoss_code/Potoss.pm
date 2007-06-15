@@ -397,7 +397,12 @@ sub PH_page_links {
             }
             
             my $page_data = _read_file($filename);
-            if ($page_data !~ m{$search_query}) {
+
+            # make it case-insensitive
+            my $lc_search_query = lc($search_query);
+            $page_data = lc($page_data);
+
+            if ($page_data !~ m{$lc_search_query}) {
                 next PAGE;
             }
 

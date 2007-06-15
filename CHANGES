@@ -1,3 +1,6 @@
+version 20070615_2
+Made the search case-insensitive
+
 version 20070615_1
 Added the ability to do a very simple search all your linked pages.
 
