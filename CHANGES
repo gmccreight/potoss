@@ -1,3 +1,12 @@
+version 20070616_1
+Added caching to the links out of a page.  It stores all *possible*
+links out of a page so that if a link is incipient, and subsequently
+a page is created which makes it real, it does not need to track
+backwards to tell the linking page that it's now a real link.
+Added a large number of tests and added sections of subroutines
+with the preface sect: for easier searchability.
+Also, added a more informative "throw" when in testing mode.
+
 version 20070615_2
 Updated the links search page to allow for sorting based on
 different criteria, such as modified time, so it acts like a recent

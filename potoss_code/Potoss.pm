@@ -166,6 +166,14 @@ sub PH_create {
 
 sub throw ($) {
     my $exception = shift;
+
+    if ($ENV{POTOSS_THROW_DIES_WITH_MORE_INFO}) {
+        # go into great detail about the error.
+        # go ahead and use Carp.
+        use Carp;
+        confess($exception);
+    }
+
     my $body = qq~
         <div style="color:red;margin-bottom:10px;">
             The website has had an error, the details of which are below.
@@ -238,7 +246,7 @@ sub _check_page_name_is_ok {
         }
 
         if (length($page_name) > 50) {
-            return "Seriously?  That page name is crazy long!  Try to keep it under 50 characters so you will be able to paste the URL into an email without it wrapping.";
+            return "Seriously?  That page name, $page_name, is crazy long!  Try to keep it under 50 characters so you will be able to paste the URL into an email without it wrapping.";
         }
 
     }
@@ -359,6 +367,10 @@ sub _wrap_text {
     return Text::Wrap::wrap('', '', $text);
 }
 
+#-----------------------------------------------------------------------------
+# sect: links out
+#-----------------------------------------------------------------------------
+
 sub PH_page_links {
     my $page_name = $cgi->param('nm_page');
     my $max_depth = $cgi->param('nm_max_depth') || 10;
@@ -371,7 +383,7 @@ sub PH_page_links {
     my $error = _check_page_name_is_ok($page_name);
     throw($error) if $error ne 'ok';
 
-    my @links = eval { page_get_links($page_name, [], {max_depth => $max_depth, mode => 'real'}) };
+    my @links = eval { page_get_links_out_recursive($page_name, [], {max_depth => $max_depth, mode => 'cached'}) };
 
     throw($@) if $@;
 
@@ -480,7 +492,152 @@ sub PH_page_links {
     hprint($body);
 }
 
-sub page_get_links {
+sub _regex_all_possible_links {
+    my $orig_word = shift;
+    my $these_are_links = shift;
+
+    my $stripped_word = $orig_word;
+
+    $stripped_word =~ s{\A \[}{}xms;
+    $stripped_word =~ s{\] \z}{}xms;
+
+    if (! $these_are_links->{$stripped_word}) {
+        $these_are_links->{$stripped_word} = {order => scalar(keys %{$these_are_links})};
+    }
+}
+
+sub is_a_valid_link {
+    my $page_name = shift;
+    my $resolved_alias = _is_page_alias_for($page_name);
+    my $resolved_page_name = $resolved_alias || $page_name;
+
+    my $error = _check_page_name_is_ok($page_name);
+    throw($error) if $error ne 'ok';
+
+    (page_fopt($page_name, 'exists', 'allows_incoming_links'))
+        ? return 1
+        : return 0;
+}
+
+sub page_read_text_and_calculate_only_valid_links {
+    my $page_name = shift;
+    my @possible_links = page_read_text_and_calculate_all_possible_links($page_name);
+    return grep({is_a_valid_link($_)} @possible_links);
+}
+
+sub page_read_text_and_calculate_all_possible_links {
+    # Based on the page's text formatting, get all the links it might
+    # possibly have.  Do not judge the validity of the links.  That is
+    # done elsewhere.
+
+    my $page_name = shift;
+    my $resolved_alias = _is_page_alias_for($page_name);
+    my $resolved_page_name = $resolved_alias || $page_name;
+
+    my $error = _check_page_name_is_ok($page_name);
+    throw($error) if $error ne 'ok';
+
+    my $data = '';
+    my $filename = get_filename_for_revision($resolved_page_name, "HEAD");
+
+    if (! -e $filename) {
+        page_does_not_exist($page_name);
+        return;
+    }
+    
+    my $page_data = _read_file($filename);
+
+    my %all_possible_links = ();
+
+    $page_data =~ s{(\[[a-z_0-9]{5,}\])}{_regex_all_possible_links($1, \%all_possible_links)}ges;
+
+    return sort {$all_possible_links{$a}->{order} <=> $all_possible_links{$b}->{order}} keys %all_possible_links;
+
+}
+
+sub _regex_process_words_for_links {
+    my $orig_word = shift;
+    my $linkable_pages = shift;
+    my $alias_pages = shift;
+
+    my $stripped_word = $orig_word;
+
+    $stripped_word =~ s{\A \[}{}xms;
+    $stripped_word =~ s{\] \z}{}xms;
+
+    my $these_are_not_links = shift;
+    my $these_are_links = shift;
+
+    if (exists $these_are_not_links->{$stripped_word}) {
+        return $orig_word;
+    }
+
+    if ( exists $these_are_links->{$stripped_word}
+        or grep ({ /^$stripped_word$/ } @{$linkable_pages} ) ) {
+            $these_are_links->{$stripped_word} = 1;
+            return qq~<a href="./?$stripped_word">$stripped_word</a>~;
+    }
+
+    # If the word matches one of the page aliases, check if the target
+    # page allows linking.  If so, return a link to the alias, otherwise
+    # return the original word with no link.
+    elsif (grep ({ /^$stripped_word$/ } @{$alias_pages} )) {
+        my $target_page = _is_page_alias_for($stripped_word);
+        if ( exists $these_are_links->{$target_page}
+            or grep ({ /^$target_page$/ } @{$linkable_pages}) ) {
+                $these_are_links->{$stripped_word} = 1;
+                return qq~<a href="./?$stripped_word">$stripped_word</a>~;
+        }
+        else {
+            return $orig_word;
+        }
+    }
+    else {
+        $these_are_not_links->{$stripped_word} = 1;
+        return $orig_word;
+    }
+}
+
+# gemhack 4 - should consolidate the follow four subroutines into one.
+sub _links_out_cache_file_create_or_update {
+    my $page_name = shift;
+    my $resolved_alias = _is_page_alias_for($page_name);
+    my $resolved_page_name = $resolved_alias || $page_name;
+
+    my @possible_links_out = page_read_text_and_calculate_all_possible_links($resolved_page_name);
+    my $filename = "$conf{CNF_TEXTS_DIR}/$resolved_page_name";
+    _write_file($filename . "_CACHE_possible_links_out", join("\n", @possible_links_out));
+    return 1;
+}
+
+sub _links_out_cache_file_exists {
+    my $page_name = shift;
+    my $resolved_alias = _is_page_alias_for($page_name);
+    my $resolved_page_name = $resolved_alias || $page_name;
+
+    my $filename = "$conf{CNF_TEXTS_DIR}/$resolved_page_name";
+    return -e $filename . "_CACHE_possible_links_out";
+}
+
+sub _links_out_cache_file_get {
+    my $page_name = shift;
+    my $resolved_alias = _is_page_alias_for($page_name);
+    my $resolved_page_name = $resolved_alias || $page_name;
+
+    my $filename = "$conf{CNF_TEXTS_DIR}/$resolved_page_name";
+    return split("\n", _read_file($filename . "_CACHE_possible_links_out"));
+}
+
+sub _links_out_cache_file_remove {
+    my $page_name = shift;
+    my $resolved_alias = _is_page_alias_for($page_name);
+    my $resolved_page_name = $resolved_alias || $page_name;
+
+    my $filename = "$conf{CNF_TEXTS_DIR}/$resolved_page_name";
+    return unlink($filename . "_CACHE_possible_links_out");
+}
+
+sub page_get_links_out_recursive {
     my $page_name = shift;
     my $found_pages = shift || [];
     my $arg_ref = shift;
@@ -490,8 +647,6 @@ sub page_get_links {
 
     die "max_depth must be integer" if ! $arg_ref->{max_depth} || $arg_ref->{max_depth} !~ /^\d+$/;
     die "must be real or cached" if ! _is_in_set($arg_ref->{mode}, qw(real cached));
-
-    die "cached not yet supported" if $arg_ref->{mode} eq 'cached';
 
     my $resolved_alias = _is_page_alias_for($page_name);
     my $resolved_page_name = $resolved_alias || $page_name;
@@ -504,6 +659,7 @@ sub page_get_links {
         $arg_ref->{depth} = 0;
         $arg_ref->{parent} = '';
         $arg_ref->{is_circular} = 0;
+        $arg_ref->{used_preexisting_cache} = 0;
 
         # gemhack 4 - this calculation should happen only once after alias
         # creation.  For now we don't have a central alias creation (or
@@ -527,6 +683,7 @@ sub page_get_links {
             page_name => $page_name,
             page_count => $page_count,
             is_circular => $arg_ref->{is_circular},
+            used_preexisting_cache => $arg_ref->{used_preexisting_cache},
             parent    => $arg_ref->{parent},
             depth    => $arg_ref->{depth},
             order     => scalar( @$found_pages ),
@@ -536,20 +693,36 @@ sub page_get_links {
 
     return if $arg_ref->{is_circular};
 
-    my @alias_pages = _get_alias_pages();
-    my @linkable_pages = _get_linkable_pages();
+    my $should_use_cache_file = 0;
+    my $used_preexisting_cache = 0;
 
-    my $page_data = _read_file($filename) || "";
-    my %these_are_not_links = ();
-    my %these_are_links = ();
-    $page_data =~ s{(\[[a-z_0-9]{5,}\])}{_regex_process_words_for_links($1, \@linkable_pages, \@alias_pages, \%these_are_not_links, \%these_are_links)}ges;
+    if ( $arg_ref->{mode} eq 'cached' ) {
+        $should_use_cache_file = 1;
 
-    my @links = ($arg_ref->{sorted}) ? sort keys %these_are_links : keys %these_are_links;
+        if (_links_out_cache_file_exists($page_name)) {
+            $used_preexisting_cache = 1;
+        }
+        else {
+            _links_out_cache_file_create_or_update($page_name);
+        }
+
+    }
+
+    my @links = ();
+
+    if ($should_use_cache_file) {
+        my @all_possible_links = _links_out_cache_file_get($page_name);
+        @links = grep({is_a_valid_link($_)} @all_possible_links);
+    }
+    else {
+        @links = page_read_text_and_calculate_only_valid_links($page_name);
+    }
+
     if ($arg_ref->{depth} < $arg_ref->{max_depth}) {
         my @deeper_links = ();
 
         LINK:
-        for my $link_page_name (sort keys %these_are_links) {
+        for my $link_page_name (@links) {
             my %arg_ref_copy = %{$arg_ref};
 
             for my $page ( @$found_pages ) {
@@ -559,7 +732,8 @@ sub page_get_links {
             }
             $arg_ref_copy{parent} = $page_name;
             $arg_ref_copy{depth} = $arg_ref->{depth} + 1;
-            push @deeper_links, page_get_links($link_page_name, $found_pages, \%arg_ref_copy);
+            $arg_ref_copy{used_preexisting_cache} = $used_preexisting_cache;
+            push @deeper_links, page_get_links_out_recursive($link_page_name, $found_pages, \%arg_ref_copy);
         }
         push @links, @deeper_links;
     }
@@ -569,6 +743,10 @@ sub page_get_links {
     if ( $arg_ref->{depth} == 0 ) {
         return @$found_pages;
     }
+}
+
+sub _get_linkable_pages {
+    return split("\n", _read_file("$conf{CNF_CACHES_DIR}/linkable_pages"));
 }
 
 sub show_page {
@@ -711,10 +889,6 @@ sub show_page {
 
 }
 
-sub _get_linkable_pages {
-    return split("\n", _read_file("$conf{CNF_CACHES_DIR}/linkable_pages"));
-}
-
 sub _get_alias_pages {
     return split("\n", _read_file("$conf{CNF_CACHES_DIR}/alias_pages"));
 }
@@ -783,49 +957,6 @@ sub _slow_down_if_too_many_guesses {
     # server's ability to serve more requests?
     if ($num_guesses > 3) {
         sleep 2 * ($num_guesses - 3);
-    }
-}
-
-sub _regex_process_words_for_links {
-    my $orig_word = shift;
-    my $linkable_pages = shift;
-    my $alias_pages = shift;
-
-    my $stripped_word = $orig_word;
-
-    $stripped_word =~ s{\A \[}{}xms;
-    $stripped_word =~ s{\] \z}{}xms;
-
-    my $these_are_not_links = shift;
-    my $these_are_links = shift;
-
-    if (exists $these_are_not_links->{$stripped_word}) {
-        return $orig_word;
-    }
-
-    if (exists $these_are_links->{$stripped_word}
-        or grep ({ /^$stripped_word$/ } @{$linkable_pages} )) {
-        $these_are_links->{$stripped_word} = 1;
-        return qq~<a href="./?$stripped_word">$stripped_word</a>~;
-    }
-
-    # If the word matches one of the page aliases, check if the target
-    # page allows linking.  If so, return a link to the alias, otherwise
-    # return the original word with no link.
-    elsif (grep ({ /^$stripped_word$/ } @{$alias_pages} )) {
-        my $target_page = _is_page_alias_for($stripped_word);
-        if (exists $these_are_links->{$target_page}
-            or grep ({ /^$target_page$/ } @{$linkable_pages} )) {
-            $these_are_links->{$stripped_word} = 1;
-            return qq~<a href="./?$stripped_word">$stripped_word</a>~;
-        }
-        else {
-            return $orig_word;
-        }
-    }
-    else {
-        $these_are_not_links->{$stripped_word} = 1;
-        return $orig_word;
     }
 }
 
@@ -1743,8 +1874,9 @@ sub _write_new_page_revision {
     my $time = time(); # The time adds a bit of randomness to the end
     _write_file("$backup_dir/${page_rev}_$time", $text);
     
-
     set_page_HEAD_revision_number_cache($page_name, $rev);
+
+    _links_out_cache_file_create_or_update($page_name);
 
 }
 
@@ -2066,6 +2198,10 @@ sub filter_print {
 
 }
 
+#-----------------------------------------------------------------------------
+# sect: IO
+#-----------------------------------------------------------------------------
+
 sub _read_file {
     # [tag:easy_install] - We don't use File::Slurp to avoid prerequisites
     my $filename = shift;
@@ -2087,6 +2223,21 @@ sub _write_file {
     close($fh)
         || die "could not close $filename after writing";
 }
+
+#-----------------------------------------------------------------------------
+# sect: libraries
+#-----------------------------------------------------------------------------
+
+sub _compat_require_file_find {
+    # [tag:compatibility] - we might want to allow for Win32 later,
+    # so use as few shell commands as possible.  So, require File::Find.
+    # Do this in a subroutine so we only have to put this note in one place.
+    require File::Find;
+}
+
+#-----------------------------------------------------------------------------
+# sect: test support
+#-----------------------------------------------------------------------------
 
 sub _test_num_pages {
     # Get the number of pages which match a quoted regex.
@@ -2160,13 +2311,6 @@ sub _test_delete_page {
             unlink($_);
         }
     }, $conf{CNF_TEXTS_DIR});
-}
-
-sub _compat_require_file_find {
-    # [tag:compatibility] - we might want to allow for Win32 later,
-    # so use as few shell commands as possible.  So, require File::Find.
-    # Do this in a subroutine so we only have to put this note in one place.
-    require File::Find;
 }
 
 #TEMPLATE_ADD_PAGEOFTEXTCOM_SUBS

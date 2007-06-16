@@ -6,7 +6,10 @@
 use strict;
 use warnings;
 
-use Test::More tests => 31;
+use Test::More tests => 41;
+
+# Since you're in the testing mode, make any "throws" die with a lot of info.
+$ENV{POTOSS_THROW_DIES_WITH_MORE_INFO} = 1;
 
 use lib qw(potoss_code);
 chdir("../");
@@ -18,23 +21,56 @@ diag("linking");
 
 my @links;
 my @page_names;
+my @link_names_only;
+
+
+@page_names = qw(
+    potoss_test_link_tree_a_branch_a
+    potoss_test_link_tree_a_branch_b
+    potoss_test_link_tree_a_branch_c
+    potoss_test_non_existent_page
+    potoss_test_existing_but_not_linkable_to_page
+);
+@link_names_only = Potoss::page_read_text_and_calculate_all_possible_links("potoss_test_link_tree_a_base");
+is_deeply(\@link_names_only, \@page_names, "base - all possible links");
+
 
 @page_names = qw(
     potoss_test_link_tree_a_branch_a
     potoss_test_link_tree_a_branch_b
     potoss_test_link_tree_a_branch_c
 );
+@link_names_only = Potoss::page_read_text_and_calculate_only_valid_links("potoss_test_link_tree_a_base");
+is_deeply(\@link_names_only, \@page_names, "base - only valid links");
 
-@links = test_get_link_page_names("potoss_test_link_tree_a_base", {max_depth => 1, mode => 'real'});
-is_deeply(\@links, \@page_names, "base - max_depth 1");
+@links = test_get_page_links("potoss_test_link_tree_a_base", {max_depth => 1, mode => 'real'});
+@link_names_only = link_names_only(@links);
+is_deeply(\@link_names_only, \@page_names, "base - max_depth 1 - real");
+is($links[0]{used_preexisting_cache}, 0, "Did NOT use a pre-existing cache");
+
+ok(Potoss::_links_out_cache_file_create_or_update("potoss_test_link_tree_a_base"), "it was able to create the cache file");
+
+@links = test_get_page_links("potoss_test_link_tree_a_base", {max_depth => 1, mode => 'cached'});
+@link_names_only = link_names_only(@links);
+is_deeply(\@link_names_only, \@page_names, "base - max_depth 1 - cached (it is available)");
+is($links[0]{used_preexisting_cache}, 1, "Used a pre-existing cache");
+
+ok(Potoss::_links_out_cache_file_remove("potoss_test_link_tree_a_base"), "It was able to remove the cache file");
+
+@links = test_get_page_links("potoss_test_link_tree_a_base", {max_depth => 1, mode => 'cached'});
+@link_names_only = link_names_only(@links);
+is_deeply(\@link_names_only, \@page_names, "base - max_depth 1 - cached (it is NOT available)");
+is($links[0]{used_preexisting_cache}, 0, "Did NOT use a pre-existing cache");
+
 
 @page_names = qw(
     potoss_test_link_tree_a_branch_a_leaf_a
     potoss_test_link_tree_a_branch_a_leaf_b
 );
+@links = test_get_page_links("potoss_test_link_tree_a_branch_a", {max_depth => 1, mode => 'real'});
+@link_names_only = link_names_only(@links);
+is_deeply(\@link_names_only, \@page_names, "branch a - max_depth 1");
 
-@links = test_get_link_page_names("potoss_test_link_tree_a_branch_a", {max_depth => 1, mode => 'real'});
-is_deeply(\@links, \@page_names, "branch a - max_depth 1");
 
 @page_names = qw(
     potoss_test_link_tree_a_branch_a
@@ -52,9 +88,10 @@ is_deeply(\@links, \@page_names, "branch a - max_depth 1");
     potoss_test_link_tree_a_branch_c_leaf_c
     potoss_test_link_tree_a_branch_c_leaf_d
 );
+@links = test_get_page_links("potoss_test_link_tree_a_base", {max_depth => 2, mode => 'real'});
+@link_names_only = link_names_only(@links);
+is_deeply(\@link_names_only, \@page_names, "base sorted- max_depth 2");
 
-@links = test_get_link_page_names("potoss_test_link_tree_a_base", {max_depth => 2, mode => 'real'});
-is_deeply(\@links, \@page_names, "base sorted- max_depth 2");
 
 @page_names = qw(
     potoss_test_link_tree_a_branch_a
@@ -72,17 +109,23 @@ is_deeply(\@links, \@page_names, "base sorted- max_depth 2");
     potoss_test_link_tree_a_branch_c_leaf_c
     potoss_test_link_tree_a_branch_c_leaf_d
 );
+@links = test_get_page_links("potoss_test_link_tree_a_base", {max_depth => 2, mode => 'real'});
+@link_names_only = link_names_only(@links);
+is_deeply(\@link_names_only, \@page_names, "base sorted- max_depth 2 - real");
 
-@links = test_get_link_page_names("potoss_test_link_tree_a_base", {max_depth => 2, mode => 'real'});
-is_deeply(\@links, \@page_names, "base sorted- max_depth 2");
+@links = test_get_page_links("potoss_test_link_tree_a_base", {max_depth => 2, mode => 'cached'});
+@link_names_only = link_names_only(@links);
+is_deeply(\@link_names_only, \@page_names, "base sorted- max_depth 2 - cached (but not available)");
 
-#@links = test_get_link_page_names("potoss_test_link_tree_a_base", {max_depth => 100, mode => 'real'});
-#is_deeply(\@links, \@page_names, "max_depth => 100 should give same result");
-
-sub test_get_link_page_names {
+sub test_get_page_links {
     my $page_name = shift;
     my $arg_ref = shift;
-    my @links = Potoss::page_get_links($page_name, [], $arg_ref);
+    my @links = Potoss::page_get_links_out_recursive($page_name, [], $arg_ref);
+    return @links;
+}
+
+sub link_names_only {
+    my @links = @_;
     @links = sort {$a->{order} <=> $b->{order} } @links;
     @links = map({$_->{page_name}} @links);
     return @links;
