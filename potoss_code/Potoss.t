@@ -236,18 +236,20 @@ diag("page name guesses");
 # _clear_old_page_name_guesses subroutine.
 my $older_file = "$Potoss::conf{CNF_CACHES_DIR}/guess_12_34_56_78";
 Potoss::_write_file($older_file, '3');
-my $older_time = time() - 100;
+
+# Make it look two minutes old.
+my $older_time = time() - 120;
 utime($older_time, $older_time, $older_file);
 
-my $new_file = "$Potoss::conf{CNF_CACHES_DIR}/guess_90_12_34_56";
-Potoss::_write_file($new_file, '3');
+my $newer_file = "$Potoss::conf{CNF_CACHES_DIR}/guess_90_12_34_56";
+Potoss::_write_file($newer_file, '3');
 
-my @guesses = Potoss::_clear_old_page_name_guesses();
-ok( grep( {/guess_12_34_56_78/} @guesses ),
+my @guesses_cleared = Potoss::_clear_old_page_name_guesses();
+ok( grep( {/guess_12_34_56_78/} @guesses_cleared ),
     "clears the older 12_34_56_78 guess"
 );
-ok( !grep( {/guess_90_12_34_56/} @guesses ),
+ok( !grep( {/guess_90_12_34_56/} @guesses_cleared ),
     "does not clear the newer 90_12_34_56 guess"
 );
 
-unlink($new_file);
+unlink($newer_file);
