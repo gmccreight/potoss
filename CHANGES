@@ -1,3 +1,7 @@
+version 20070617_1
+Only have the encrypt button when in "edit" mode.  There's no point
+to it in the "view" mode.  Updated the Selenium tests.
+
 version 20070616_1
 Added caching to the links out of a page.  It stores all *possible*
 links out of a page so that if a link is incipient, and subsequently

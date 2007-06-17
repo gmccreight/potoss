@@ -859,7 +859,7 @@ sub show_page {
     my $create_new_link = qq~<a href="./?PH_create" style="margin-right:40px;">create a new page</a>~;
     $create_new_link = '' if page_fopt($page_name, 'exists', "remove_create_new_link");
 
-    my $blowfish_buttons = ($show_encryption_buttons) ? _blowfish_buttons() : '';
+    my $blowfish_buttons = ($show_encryption_buttons) ? _blowfish_buttons("decrypt_only") : '';
 
     my $bar_color_hex = page_fopt($page_name, 'get', 'bar_color_hex') || 'eee';
 
@@ -1143,9 +1143,19 @@ my $body = qq~<?xml version="1.0"?>
 }
 
 sub _blowfish_buttons {
+    my $mode = shift;
+    throw("mode must be both or decrypt_only") if
+        ! _is_in_set($mode, qw(both decrypt_only) );
+
+    my $encrypt = qq~
+        <a href="javascript:do_blowfish('encrypt', document.getElementById('myel_blowfish_key').value)">encrypt</a> or 
+    ~;
+
+    $encrypt = '' if $mode eq 'decrypt_only';
+
     return qq~
     <div style="padding:10px;background-color:#eee;">
-        <a href="javascript:do_blowfish('encrypt', document.getElementById('myel_blowfish_key').value)">encrypt</a> or 
+        $encrypt
         <a href="javascript:do_blowfish('decrypt', document.getElementById('myel_blowfish_key').value)">decrypt</a> using the key
         <input id="myel_blowfish_key" type="text" value="some_key" />
     </div>
@@ -1224,7 +1234,7 @@ sub PH_edit {
     my $remove_branding = page_fopt($page_name, 'exists', "remove_branding");
     my $remove_container_div = page_fopt($page_name, 'exists', "remove_container_div");
 
-    my $blowfish_buttons = ($show_encryption_buttons) ? _blowfish_buttons() : '';
+    my $blowfish_buttons = ($show_encryption_buttons) ? _blowfish_buttons("both") : '';
 
     my $body = qq~
         $revision_alert
