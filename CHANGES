@@ -1,3 +1,7 @@
+version 20070617_4
+Came up with a better alternative to the "loops back" wording in the
+link tree page.
+
 version 20070617_3
 Fixed a bug in the is_a_valid_link subroutine.  It needed to resolve
 a page alias before testing if it could link to the page.

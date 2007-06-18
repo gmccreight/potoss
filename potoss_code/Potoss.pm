@@ -392,10 +392,24 @@ sub PH_page_links {
 
     @links = sort {$a->{$sort_by} <=> $b->{$sort_by}} @links;
 
+    my %num_circular_seen = ();
+
     PAGE:
     for my $page (@links) {
         my $warning = '';
-        $warning .= "loops back" if $page->{is_circular};
+
+        if ($page->{is_circular}) {
+            if ($num_circular_seen{$page->{page_name}}) {
+                $num_circular_seen{$page->{page_name}}++;
+            }
+            else {
+                $num_circular_seen{$page->{page_name}} = 1;
+            }
+        }
+
+        my $number_in_parens = $num_circular_seen{$page->{page_name}} + 1;
+
+        $warning .= "($number_in_parens)" if $page->{is_circular};
 
         $warning = ($warning)
             ? qq~ <span style="color:red;">$warning</span>~
