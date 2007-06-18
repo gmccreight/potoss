@@ -2092,7 +2092,7 @@ sub hprint {
         # gemhack 5 - If you change the following to be XMTML, it will fail
         # in Internet Explorer 7 for some odd reason.  Don't do it!
         my $do_not_change_formatting_of_script_include = qq~
-            <script src="./static/keys2.js" type="text/javascript"></script>
+            <script src="./static/keys3.js" type="text/javascript"></script>
         ~;
 
         $maybe_keys_js = qq~

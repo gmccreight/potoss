@@ -26,8 +26,10 @@ function myKeyDown(e){
 
   switch(mykey) {
     case 'w':
-      // f is easy to reach, and most people are right handed, so they can
-      // use it with their finger on the mouse.
+      // w is easy to reach, and most people are right handed, so they can
+      // use it with their finger on the mouse.  Also, it's the key which
+      // closes the browser window when used with CTRL, so it doesn't
+      // conflict with CTRL-f for find, CTRL-b for bookmarking, etc.
       var key_palette = document.getElementById('myel_keys_palette');
       if (key_palette.style.left == "-1000px") {
         var v_sPageName = get_pagename();
@@ -37,6 +39,8 @@ function myKeyDown(e){
       }
       else {
         key_palette.style.left = "-1000px";
+        key_palette.innerHTML = '';
+        document.location = document.location;
       }
       
       break;
