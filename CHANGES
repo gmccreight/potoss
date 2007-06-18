@@ -1,3 +1,7 @@
+version 20070617_3
+Fixed a bug in the is_a_valid_link subroutine.  It needed to resolve
+a page alias before testing if it could link to the page.
+
 version 20070617_2
 When you use the quick palette to make a change, then close it,
 it now updates the page.

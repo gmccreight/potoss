@@ -508,13 +508,14 @@ sub _regex_all_possible_links {
 
 sub is_a_valid_link {
     my $page_name = shift;
-    my $resolved_alias = _is_page_alias_for($page_name);
-    my $resolved_page_name = $resolved_alias || $page_name;
 
     my $error = _check_page_name_is_ok($page_name);
     throw($error) if $error ne 'ok';
 
-    (page_fopt($page_name, 'exists', 'allows_incoming_links'))
+    my $resolved_alias = _is_page_alias_for($page_name);
+    my $resolved_page_name = $resolved_alias || $page_name;
+
+    (page_fopt($resolved_page_name, 'exists', 'allows_incoming_links'))
         ? return 1
         : return 0;
 }
