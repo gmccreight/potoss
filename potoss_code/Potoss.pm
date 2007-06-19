@@ -860,7 +860,7 @@ sub show_page {
         $edit = qq~<span style="color:red;margin-right:20px;">this page is read only</span>~;
     }
 
-    my $rss_feed_icon = qq~<a href="http://$conf{CNF_SITE_BASE_URL}/?PH_rss&nm_pages=$page_name" style="float:right;">
+    my $rss_feed_icon = qq~<a href="http://./?PH_rss&nm_pages=$page_name" style="float:right;">
         <img src="./static/rss.jpg" height="12" width="12" border="0"/>
     </a>~;
 
