@@ -1986,6 +1986,10 @@ sub set_page_HEAD_revision_number_cache {
     _write_file("$conf{CNF_TEXTS_DIR}/${page_name}_HREV", $revision);
 }
 
+sub PH_redirect_test {
+    do_redirect("./?potoss_saved_test");
+}
+
 sub do_redirect {
     my $location = shift;
     if ($ENV{SERVER_SOFTWARE} =~ m{HTTP::Server::Simple}) {

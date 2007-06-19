@@ -53,6 +53,11 @@ my %test_for = (
         dir   => '/?',
         texts => '/cygdrive/i/potoss_dev_alias/potoss_data/texts_8s73f9dv/',
     },
+    potoss_dev_http_simple => {
+        url   => 'www.potoss_dev.com:4782', # you can set this in your HOSTS file
+        dir   => '/?',
+        texts => '/cygdrive/i/potoss_dev_alias/potoss_data/texts_8s73f9dv/',
+    },
     #TEMPLATE_ADD_EXTRA_SELENIUM_TEST_DIRS
 );
 
