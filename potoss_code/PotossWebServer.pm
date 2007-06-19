@@ -7,11 +7,10 @@ package PotossWebServer;
 # It's the fallback if you don't have the modules already installed on
 # your system.  If you do, your system will use those.
 
-BEGIN { push(@INC, qw(fallback_libs)); }
+BEGIN { unshift(@INC, qw(fallback_libs)); }
 
 use HTTP::Server::Simple::CGI;
 use HTTP::Server::Simple::Static;
-use IO::Capture::Stdout;
 use base qw( HTTP::Server::Simple::CGI HTTP::Server::Simple::Static );
 
 use strict;
