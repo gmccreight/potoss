@@ -1,3 +1,7 @@
+version 20070618_1
+Added a fallback library of modules to help make installation
+super-fast.
+
 version 20070617_4
 Came up with a better alternative to the "loops back" wording in the
 link tree page.

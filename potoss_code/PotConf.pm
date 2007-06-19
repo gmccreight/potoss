@@ -13,6 +13,7 @@ use lib qw( ./potoss_code/patched_libs );
 # Push this directory onto the end, so it's the last one that is checked.
 # It's the fallback if you don't have the modules already installed on
 # your system.  If you do, your system will use those.
+# You can decide not to use this fallback library by simply commenting it out.
 
 BEGIN { push(@INC, qw(fallback_libs)); }
 
