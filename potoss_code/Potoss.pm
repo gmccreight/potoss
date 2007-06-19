@@ -340,7 +340,7 @@ sub PH_plain {
     my $rev = $cgi->param("nm_rev") || "HEAD";
 
     my $filename = get_filename_for_revision($page, $rev);
-    print $cgi->header('text/plain');
+    print $cgi->header(-type => 'text/plain', -expires => '-1d');
 
     if (! -e $filename){
         print "Error: the file does not exist";
@@ -1151,7 +1151,7 @@ my $body = qq~<?xml version="1.0"?>
         hprint($body);
     }
     else {
-        print $cgi->header('application/rss+xml');
+        print $cgi->header(-type => 'application/rss+xml', -expires => '-1d');
         filter_print($body);
     }
 
@@ -2167,7 +2167,7 @@ sub hprint {
     $start_container_div = '' if $arg_ref->{remove_container_div};
     $end_container_div = '' if $arg_ref->{remove_container_div};
 
-    print $cgi->header() if $ENV{SERVER_SOFTWARE} !~ m{HTTP::Server::Simple};
+    print $cgi->header(-expires => '-1d') if $ENV{SERVER_SOFTWARE} !~ m{HTTP::Server::Simple};
 
     my $document_start = qq~<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
    "http://www.w3.org/TR/html4/loose.dtd"><html><head><title>$conf{CNF_SITE_READABLE_NAME}</title>
