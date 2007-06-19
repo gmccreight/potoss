@@ -7,7 +7,7 @@ package PotossWebServer;
 # It's the fallback if you don't have the modules already installed on
 # your system.  If you do, your system will use those.
 
-BEGIN { unshift(@INC, qw(fallback_libs)); }
+BEGIN { push(@INC, qw(fallback_libs)); }
 
 use HTTP::Server::Simple::CGI;
 use HTTP::Server::Simple::Static;
@@ -19,14 +19,16 @@ use warnings;
 sub handle_request {
     my($self, $cgi) = @_;
 
-    if ($ENV{REQUEST_URI} =~ /\.(gif|png|css|js)/) {
+    if ($ENV{REQUEST_URI} =~ /\.(gif|png|jpg|css|js)$/) {
         $self->serve_static($cgi, ".");
     }
     else {
+
         eval {
             require Potoss;
             Potoss::main($cgi, {CNF_SHOULD_STRIP_QUESTION_MARKS => 0});
         };
+
     }
 }
 

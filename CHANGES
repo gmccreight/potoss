@@ -1,3 +1,7 @@
+version 20070619_1
+Changes to the built-in server to make it handle redirects and
+give normal headers properly.
+
 version 20070618_2
 Added the expires HTTP header to expire each page -1d (ASAP!)
 This ought to keep browsers from caching the page.

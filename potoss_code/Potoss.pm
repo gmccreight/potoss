@@ -340,6 +340,9 @@ sub PH_plain {
     my $rev = $cgi->param("nm_rev") || "HEAD";
 
     my $filename = get_filename_for_revision($page, $rev);
+    if ($ENV{SERVER_SOFTWARE} =~ m{HTTP::Server::Simple}) {
+        print "HTTP/1.0 200 OK\r\n";
+    }
     print $cgi->header(-type => 'text/plain', -expires => '-1d');
 
     if (! -e $filename){
@@ -1151,6 +1154,9 @@ my $body = qq~<?xml version="1.0"?>
         hprint($body);
     }
     else {
+        if ($ENV{SERVER_SOFTWARE} =~ m{HTTP::Server::Simple}) {
+            print "HTTP/1.0 200 OK\r\n";
+        }
         print $cgi->header(-type => 'application/rss+xml', -expires => '-1d');
         filter_print($body);
     }
@@ -1982,6 +1988,9 @@ sub set_page_HEAD_revision_number_cache {
 
 sub do_redirect {
     my $location = shift;
+    if ($ENV{SERVER_SOFTWARE} =~ m{HTTP::Server::Simple}) {
+        print "HTTP/1.0 301 Moved Permanently\r\n";
+    }
     filter_print("Location:$location\n\n");
 }
 
@@ -2167,7 +2176,10 @@ sub hprint {
     $start_container_div = '' if $arg_ref->{remove_container_div};
     $end_container_div = '' if $arg_ref->{remove_container_div};
 
-    print $cgi->header(-expires => '-1d') if $ENV{SERVER_SOFTWARE} !~ m{HTTP::Server::Simple};
+    if ($ENV{SERVER_SOFTWARE} =~ m{HTTP::Server::Simple}) {
+        print "HTTP/1.0 200 OK\r\n";
+    }
+    print $cgi->header(-expires => '-1d');
 
     my $document_start = qq~<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
    "http://www.w3.org/TR/html4/loose.dtd"><html><head><title>$conf{CNF_SITE_READABLE_NAME}</title>

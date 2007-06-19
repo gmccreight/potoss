@@ -15,7 +15,7 @@ use lib qw( ./potoss_code/patched_libs );
 # your system.  If you do, your system will use those.
 # You can decide not to use this fallback library by simply commenting it out.
 
-BEGIN { unshift(@INC, qw(./potoss_code/fallback_libs)); }
+BEGIN { push(@INC, qw(./potoss_code/fallback_libs)); }
 
 our %conf = ();
 
