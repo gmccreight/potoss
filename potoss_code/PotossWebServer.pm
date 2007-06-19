@@ -1,5 +1,14 @@
 package PotossWebServer;
 
+# [tag:easy_install]
+# Don't make the person install all the needed modules.  Give them default
+# ones which work OK.
+# Push this directory onto the end, so it's the last one that is checked.
+# It's the fallback if you don't have the modules already installed on
+# your system.  If you do, your system will use those.
+
+BEGIN { push(@INC, qw(fallback_libs)); }
+
 use HTTP::Server::Simple::CGI;
 use HTTP::Server::Simple::Static;
 use IO::Capture::Stdout;
