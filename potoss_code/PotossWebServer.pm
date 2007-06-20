@@ -1,5 +1,7 @@
 package PotossWebServer;
 
+use lib qw(patched_libs);
+
 # [tag:easy_install]
 # Don't make the person install all the needed modules.  Give them default
 # ones which work OK.
