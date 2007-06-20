@@ -1993,7 +1993,7 @@ sub PH_redirect_test {
 sub do_redirect {
     my $location = shift;
     if ($ENV{SERVER_SOFTWARE} =~ m{HTTP::Server::Simple}) {
-        print "HTTP/1.0 301 Moved Permanently\r\n";
+        print "HTTP/1.0 302 Found\r\n";
     }
     filter_print("Location:$location\n\n");
 }
