@@ -1,3 +1,6 @@
+version 20070620_1
+The redirects didn't actually work in IE, but now they do.
+
 version 20070619_1
 Changes to the built-in server to make it handle redirects and
 give normal headers properly.
