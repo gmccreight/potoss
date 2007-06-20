@@ -31,6 +31,8 @@ sub handle_request {
             Potoss::main($cgi, {CNF_SHOULD_STRIP_QUESTION_MARKS => 0});
         };
 
+        warn $@ if $@;
+
     }
 }
 
