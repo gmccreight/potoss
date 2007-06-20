@@ -21,6 +21,11 @@ sub serve_static {
     my ( $self, $cgi, $base ) = @_;
     my $path = $cgi->url( -absolute => 1, -path_info => 1 );
 
+    # Internet Explorer provides the full URI in the GET section
+    # of the request header, so remove the protocol, domain name,
+    # and port if they exist.
+    $path =~ s{(\w+)://([^/:]+)(:\d+)?/}{/};
+
     # Sanitize the path and try it.
     $path = $base . canonpath( URI::Escape::uri_unescape($path) );
 
