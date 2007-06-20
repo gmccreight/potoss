@@ -22,7 +22,7 @@ my $SELENIUM_SERVER_DIR =
     qq~"C:\\Program Files\\selenium-remote-control-0.9.1_nightly\\server"~;
 
 my @BROWSERS = (
-    { name => 'firefox',  should_test => 1 },
+    { name => 'firefox',  should_test => 0 },
     { name => 'iexplore', should_test => 1 },
     { name => 'opera', should_test => 0 }, # works, but gives a little popup error.
 );
