@@ -1216,7 +1216,7 @@ sub PH_edit {
             $revision_alert = qq~
                 <div>
                     <span style="color:red;">You are not editing the latest revision.  You are looking at revision $revision.<span>
-                    <a href="./?PH_edit&nm_page=$page_name$no_opts_uri">Edit the latest revision</a>
+                    <a href="./?PH_edit&nm_page=$page_name&nm_rev=HEAD$no_opts_uri">Edit the latest revision</a>
                 </div>
             ~;
         }
