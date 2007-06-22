@@ -1,3 +1,9 @@
+version 20070622_1
+Fix for: If you click "edit this page" on an older page, it
+correctly warns you that you are editing an older version.
+If you click on "Edit the latest version", it continues to
+warn you that you are editing an older version.
+
 version 20070620_1
 The redirects didn't actually work in IE, but now they do.
 
