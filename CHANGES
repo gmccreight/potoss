@@ -1,3 +1,8 @@
+version 20070622_2
+Made the edit "cancel" button do the right thing instead of just
+going 'back'.  Added a handful of tests to the Selenium tests
+to check for the proper functioning of the "cancel" button.
+
 version 20070622_1
 Fix for: If you click "edit this page" on an older page, it
 correctly warns you that you are editing an older version.

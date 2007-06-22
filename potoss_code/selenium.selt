@@ -17,7 +17,7 @@ use Test::More;
 use Test::WWW::Selenium;
 use Time::HiRes qw( usleep ); #a more high resolution sleep timer
 
-my $NUM_TESTS_PER_BROWSER = 119;
+my $NUM_TESTS_PER_BROWSER = 135;
 my $SELENIUM_SERVER_DIR =
     qq~"C:\\Program Files\\selenium-remote-control-0.9.1_nightly\\server"~;
 
@@ -233,6 +233,32 @@ for my $browser (@browsers_to_test) {
     my_loads_ok();
     $sel->click_ok("link=hide the encryption buttons");
     my_loads_ok();
+
+    #-------------------------------------------------------------------------
+    # Story:
+    # A user decides to edit starting at a non-HEAD revision.
+    # There should be alerts about this, but they should be able to get to
+    # the right place to edit, and if they cancel their edit, it should take
+    # them back to the page on the right revision.
+
+    $sel->open_ok("/?PH_edit&nm_page=potoss_saved_test&nm_rev=9");
+    $sel->is_text_present_ok("You are not editing the latest revision");
+    $sel->click_ok("link=Edit the latest revision");
+    my_loads_ok();
+    $sel->click_ok("//input[\@value='cancel']");
+    my_loads_ok();
+    $sel->is_text_present_ok("edit this page");
+
+    $sel->click_ok("myel_edit_link");
+    my_loads_ok();
+    $sel->click_ok("//input[\@value='cancel']");
+    my_loads_ok();
+    $sel->is_text_present_ok("edit this page");
+
+    $sel->open_ok("/?PH_edit&nm_page=potoss_saved_test&nm_rev=9");
+    $sel->click_ok("//input[\@value='cancel']");
+    my_loads_ok();
+    $sel->is_text_present_ok("You are looking at revision 9");
 
     #-------------------------------------------------------------------------
     # Story:

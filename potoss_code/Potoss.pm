@@ -793,7 +793,7 @@ sub show_page {
         if (get_page_HEAD_revision_number($page_name, 'cached') != $revision) {
             $revision_alert = qq~
                 <div>
-                    <span style="color:red;">You are not looking at the latest revision.  You are looking at revision $revision.<span>
+                    <span style="color:red;">You are not looking at the latest revision.  You are looking at revision $revision.</span>
                     <a href="./?PH_show_page&nm_page=$page_name$no_opts_uri">Go to the latest revision</a>
                 </div>
             ~;
@@ -1215,7 +1215,7 @@ sub PH_edit {
         if ($head_revision_number != $revision) {
             $revision_alert = qq~
                 <div>
-                    <span style="color:red;">You are not editing the latest revision.  You are looking at revision $revision.<span>
+                    <span style="color:red;">You are not editing the latest revision.  You are looking at revision $revision.</span>
                     <a href="./?PH_edit&nm_page=$page_name&nm_rev=HEAD$no_opts_uri">Edit the latest revision</a>
                 </div>
             ~;
@@ -1257,6 +1257,8 @@ sub PH_edit {
 
     my $blowfish_buttons = ($show_encryption_buttons) ? _blowfish_buttons("both") : '';
 
+    my $cancel_url = "./?PH_show_page&nm_page=$page_name&nm_rev=$revision$no_opts_uri";
+
     my $body = qq~
         $revision_alert
         $first_edit_alert
@@ -1274,7 +1276,7 @@ sub PH_edit {
             
             <div>
                 <input type="submit" name="nm_submit" value="save" class="form" style="margin-right:10px;">
-                <input type="button" value="cancel" class="form" onclick="javascript:history.back(1);">
+                <input type="button" value="cancel" class="form" onclick="document.location = '$cancel_url';">
             </div>
         </form>
     ~;
