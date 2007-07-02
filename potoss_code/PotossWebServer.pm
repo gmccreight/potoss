@@ -21,7 +21,10 @@ use warnings;
 sub handle_request {
     my($self, $cgi) = @_;
 
-    if ($ENV{REQUEST_URI} =~ /\.(gif|png|jpg|css|js)$/) {
+    if ($ENV{REQUEST_URI} =~ /kill_server$/) {
+        exit 0;
+    }
+    elsif ($ENV{REQUEST_URI} =~ /\.(gif|png|jpg|css|js)$/) {
         $self->serve_static($cgi, ".");
     }
     else {
