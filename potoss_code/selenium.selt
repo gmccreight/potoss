@@ -121,13 +121,13 @@ for my $browser (@browsers_to_test) {
     $sel->click_ok("link=edit this page");
     my_loads_ok();
     $sel->is_text_present_ok("This message only appears the first time you edit a page");
-    $sel->type_ok("myel_text_area", "This is some text.");
+    $sel->type_ok("nm_text", "This is some text.");
     $sel->click_ok("nm_submit");
     my_loads_ok();
     $sel->is_text_present_ok("This is some text");
     $sel->click_ok("link=edit this page");
     my_loads_ok();
-    $sel->type_ok("myel_text_area", "This is some text.\nThis is even more text.");
+    $sel->type_ok("nm_text", "This is some text.\nThis is even more text.");
     $sel->click_ok("nm_submit");
     my_loads_ok();
     $sel->is_text_present_ok("This is even more text");
@@ -171,7 +171,7 @@ for my $browser (@browsers_to_test) {
     # Try to create a page name which is in the dictionary
     $sel->open_ok("${dir}PH_create");
     $sel->is_text_present_ok("like the page name");
-    $sel->type_ok("myel_page_name", "queen");
+    $sel->type_ok("nm_page", "queen");
     $sel->click_ok("nm_submit");
     my_loads_ok();
     $sel->is_text_present_ok("is in the dictionary");
@@ -181,7 +181,7 @@ for my $browser (@browsers_to_test) {
     # Try to create a page which already exists
     $sel->open_ok("${dir}PH_create");
     $sel->is_text_present_ok("like the page name");
-    $sel->type_ok("myel_page_name", "potoss_saved_test");
+    $sel->type_ok("nm_page", "potoss_saved_test");
     $sel->click_ok("nm_submit");
     my_loads_ok();
     $sel->is_text_present_ok("that one already exists");
@@ -192,7 +192,7 @@ for my $browser (@browsers_to_test) {
     # better one.
     $sel->open_ok("${dir}PH_create");
     $sel->is_text_present_ok("like the page name");
-    $sel->type_ok("myel_page_name", "My dog is always hungry!");
+    $sel->type_ok("nm_page", "My dog is always hungry!");
     $sel->click_ok("nm_submit");
     my_loads_ok();
     $sel->is_text_present_ok("changed the page name to");
