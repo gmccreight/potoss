@@ -1,3 +1,7 @@
+version 20070702_1
+Removed the page name check from the recursive links processing.
+This greatly increases the speed of the processing.
+
 version 20070622_2
 Made the edit "cancel" button do the right thing instead of just
 going 'back'.  Added a handful of tests to the Selenium tests

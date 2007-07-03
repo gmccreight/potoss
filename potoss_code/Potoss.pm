@@ -5,6 +5,8 @@ package Potoss;
 use strict;
 use warnings;
 
+#use Time::HiRes qw(tv_interval gettimeofday);
+
 require PotConf;
 
 no warnings;
@@ -526,9 +528,6 @@ sub _regex_all_possible_links {
 sub is_a_valid_link {
     my $page_name = shift;
 
-    my $error = _check_page_name_is_ok($page_name);
-    throw($error) if $error ne 'ok';
-
     my $resolved_alias = _is_page_alias_for($page_name);
     my $resolved_page_name = $resolved_alias || $page_name;
 
@@ -659,9 +658,6 @@ sub page_get_links_out_recursive {
     my $page_name = shift;
     my $found_pages = shift || [];
     my $arg_ref = shift;
-
-    my $error = _check_page_name_is_ok($page_name);
-    throw($error) if $error ne 'ok';
 
     die "max_depth must be integer" if ! $arg_ref->{max_depth} || $arg_ref->{max_depth} !~ /^\d+$/;
     die "must be real or cached" if ! _is_in_set($arg_ref->{mode}, qw(real cached));
