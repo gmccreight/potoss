@@ -1,3 +1,7 @@
+version 20070704_2
+Added pruning to the page links list.  Added a couple of tests
+for it, too.
+
 version 20070704_1
 Sped up the rss feed generation for the links search by removing
 the check for each page name's validity.

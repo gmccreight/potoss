@@ -6,7 +6,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 41;
+use Test::More tests => 43;
 
 # Since you're in the testing mode, make any "throws" die with a lot of info.
 $ENV{POTOSS_THROW_DIES_WITH_MORE_INFO} = 1;
@@ -116,6 +116,47 @@ is_deeply(\@link_names_only, \@page_names, "base sorted- max_depth 2 - real");
 @links = test_get_page_links("potoss_test_link_tree_a_base", {max_depth => 2, mode => 'cached'});
 @link_names_only = link_names_only(@links);
 is_deeply(\@link_names_only, \@page_names, "base sorted- max_depth 2 - cached (but not available)");
+
+#-----------------------------------------------------------------------------
+# Story: Prune one of the branches
+
+@page_names = qw(
+    potoss_test_link_tree_a_branch_b
+    potoss_test_link_tree_a_branch_b_branch_a
+    potoss_test_link_tree_a_branch_b_branch_b
+    potoss_test_link_tree_a_branch_b_leaf_a
+
+    potoss_test_link_tree_a_branch_c
+    potoss_test_link_tree_a_branch_c_leaf_a
+    potoss_test_link_tree_a_branch_c_leaf_b
+    potoss_test_link_tree_a_branch_c_leaf_c
+    potoss_test_link_tree_a_branch_c_leaf_d
+);
+@links = test_get_page_links("potoss_test_link_tree_a_base", {max_depth => 2, mode => 'real', prune_list => ['potoss_test_link_tree_a_branch_a']});
+@link_names_only = link_names_only(@links);
+is_deeply(\@link_names_only, \@page_names, "Prune one of the branches");
+
+# End Story
+#-----------------------------------------------------------------------------
+# Story: Prune a different branch
+
+@page_names = qw(
+     potoss_test_link_tree_a_branch_a
+    potoss_test_link_tree_a_branch_a_leaf_a
+    potoss_test_link_tree_a_branch_a_leaf_b
+
+    potoss_test_link_tree_a_branch_c
+    potoss_test_link_tree_a_branch_c_leaf_a
+    potoss_test_link_tree_a_branch_c_leaf_b
+    potoss_test_link_tree_a_branch_c_leaf_c
+    potoss_test_link_tree_a_branch_c_leaf_d
+);
+@links = test_get_page_links("potoss_test_link_tree_a_base", {max_depth => 2, mode => 'real', prune_list => ['potoss_test_link_tree_a_branch_b']});
+@link_names_only = link_names_only(@links);
+is_deeply(\@link_names_only, \@page_names, "Prune a different branch");
+
+# End Story
+#-----------------------------------------------------------------------------
 
 sub test_get_page_links {
     my $page_name = shift;

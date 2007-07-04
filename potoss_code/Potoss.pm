@@ -381,7 +381,10 @@ sub PH_page_links {
     my $max_depth = $cgi->param('nm_max_depth') || 10;
     my $search_query = $cgi->param('nm_search_query') || '';
     my $sort_by = $cgi->param('nm_sort_by') || 'order';
+    my $prune_list = $cgi->param('nm_prune_list') || '';
     my $mode = $cgi->param('nm_mode') || 'html';
+
+        #throw($prune_list);
 
     if (! _is_in_set($mode, qw(html rss)) ) {
         throw("mode must be html or rss");
@@ -393,7 +396,11 @@ sub PH_page_links {
     my $error = _check_page_name_is_ok($page_name);
     throw($error) if $error ne 'ok';
 
-    my @links = eval { page_get_links_out_recursive($page_name, [], {max_depth => $max_depth, mode => 'cached'}) };
+    my @prune_list_array = split(/-/, $prune_list);
+
+
+
+    my @links = eval { page_get_links_out_recursive($page_name, [], {max_depth => $max_depth, mode => 'cached', prune_list => \@prune_list_array}) };
 
     throw($@) if $@;
 
@@ -427,13 +434,11 @@ sub PH_page_links {
             ? qq~ <span style="color:red;">$warning</span>~
             : '';
 
-        my $page_name = $page->{page_name};
-
         if ($search_query) {
-            my $filename = get_filename_for_revision($page_name, "HEAD");
+            my $filename = get_filename_for_revision($page->{page_name}, "HEAD");
 
             if (! -e $filename) {
-                page_does_not_exist($page_name);
+                page_does_not_exist($page->{page_name});
                 return;
             }
             
@@ -465,10 +470,13 @@ sub PH_page_links {
             $indenting .= qq~<span style="background-color:#$color">&nbsp;&nbsp;&nbsp;</span>~;
         }
 
+        my $prune = $prune_list . "-" . $page->{page_name};
+
         $rows .= qq~
             <tr>
-                <td style="padding:4px;">$indenting <a href="./?$page_name">$page_name$warning</a></td>
+                <td style="padding:4px;">$indenting <a href="./?$page->{page_name}">$page->{page_name}$warning</a></td>
                 <td style="padding:4px;">$page->{modified}</td>
+                <td style="padding:4px;"><a href="./?PH_page_links&nm_page=$page_name&nm_search_query=$search_query&nm_max_depth=$max_depth&nm_prune_list=$prune&nm_sort_by=$sort_by">prune</a></td>
             </tr>
         ~;
     }
@@ -478,19 +486,25 @@ sub PH_page_links {
         : '';
 
     my @headings = (
-        {title => "page", sort_by => "order"},
-        {title => "days old", sort_by => "modified"},
+        {title => "page", sort_by => "order", is_sortable => 1},
+        {title => "days old", sort_by => "modified", is_sortable => 1},
+        {title => "actions", is_sortable => 0},
     );
 
     my $heading_str = '';
     for my $heading (@headings) {
 
-        my $style = ($heading->{sort_by} eq $sort_by)
-            ? qq~style="background-color:#fee;padding:2px;"~
-            : '';
+        if ($heading->{is_sortable}) {
+            my $style = ($heading->{sort_by} eq $sort_by)
+                ? qq~style="background-color:#fee;padding:2px;"~
+                : '';
 
-        my $url = qq~./?PH_page_links&nm_page=$page_name&nm_search_query=$search_query&nm_max_depth=$max_depth&nm_sort_by=~;
-        $heading_str .= qq~<th><a href="$url$heading->{sort_by}"$style>$heading->{title}</a></th>~;
+            my $url = qq~./?PH_page_links&nm_page=$page_name&nm_search_query=$search_query&nm_max_depth=$max_depth&nm_prune_list=$prune_list&nm_sort_by=~;
+            $heading_str .= qq~<th><a href="$url$heading->{sort_by}"$style>$heading->{title}</a></th>~;
+        }
+        else {
+            $heading_str .= qq~<th>$heading->{title}</th>~;
+        }
     }
 
     my $results_table = qq~
@@ -504,9 +518,14 @@ sub PH_page_links {
         ? qq~<span style="color:red;">No matching results</span>~
         : $results_table;
 
-    my $rss_feed_icon = qq~<a href="./?PH_page_links&nm_page=$page_name&nm_search_query=$search_query&nm_max_depth=$max_depth&nm_sort_by=$sort_by&nm_mode=rss" style="float:right;">
+    my $rss_feed_icon = qq~<a href="./?PH_page_links&nm_page=$page_name&nm_search_query=$search_query&nm_max_depth=$max_depth&nm_prune_list=$prune_list&nm_sort_by=$sort_by&nm_mode=rss" style="float:right;">
         <img src="./static/rss.jpg" height="12" width="12" border="0"/>
     </a>~;
+
+    my $unprune_all_link = '';
+    if (@prune_list_array) {
+        $unprune_all_link = qq~<a href="./?PH_page_links&nm_page=$page_name&nm_search_query=$search_query&nm_max_depth=$max_depth&nm_prune_list=&nm_sort_by=$sort_by">unprune all</a>~;
+    }
 
     my $body = qq~
         <h4>Links for: <a href="./?$page_name">$page_name</a></h4>
@@ -514,11 +533,14 @@ sub PH_page_links {
         <form id="fr_search_links" method="post" action="./?" style="margin-bottom:20px;">
             <input type="hidden" name="PH_page_links" value="1">
             <input type="hidden" name="nm_page" value="$page_name">
+            <input type="hidden" name="nm_prune_list" value="$prune_list">
             <input type="hidden" name="nm_sort_by" value="$sort_by">
             search page contents for: <input type="text" name="nm_search_query" value="$search_query" style="width:200px;margin-right:20px;">
             max_depth: <input type="text" name="nm_max_depth" value="$max_depth" style="width:30px;margin-right:20px;">
             <input type="submit" name="nm_submit" value="search" class="form">
+            $unprune_all_link
         </form>
+        
         $results_table
     ~;
 
@@ -690,6 +712,14 @@ sub page_get_links_out_recursive {
 
     die "max_depth must be integer" if ! $arg_ref->{max_depth} || $arg_ref->{max_depth} !~ /^\d+$/;
     die "must be real or cached" if ! _is_in_set($arg_ref->{mode}, qw(real cached));
+
+    my @prune_list = ($arg_ref->{prune_list})
+        ? @{$arg_ref->{prune_list}}
+        : ();
+
+    if (grep({$_ eq $page_name} @prune_list)) {
+        return;
+    }
 
     my $resolved_alias = _is_page_alias_for($page_name);
     my $resolved_page_name = $resolved_alias || $page_name;
