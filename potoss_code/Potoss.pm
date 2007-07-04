@@ -1072,9 +1072,25 @@ sub _internal_diff {
 
 sub PH_rss {
     require DateTime;
-    my $page_names = $cgi->param("nm_pages") || shift || '';
+
+    my $page_names = shift;
 
     my $MAX_NUM_REVISIONS = 20;
+    my $should_check_page_names = undef;
+
+    if ($page_names) {
+        # [tag:performance]
+        # Called by the PH_page_links subroutine, which already has a
+        # list of existing pages... so no need to re-check the page names,
+        # which is slow.
+        $should_check_page_names = 0;
+    }
+    else {
+        # Called by a GET request.  Check the page names, since there may
+        # have been misspellings in the URL.
+        $page_names = $cgi->param("nm_pages");
+        $should_check_page_names = 1;
+    }
 
     my @pages = split(/-/, $page_names);
 
@@ -1082,9 +1098,11 @@ sub PH_rss {
     # front of the revision number for the page.
     my $show_page_prefixes = (scalar(@pages) > 1) ? 1 : 0;
 
-    for my $page_name (@pages) {
-        my $error = _check_page_name_is_ok($page_name);
-        throw($error) if $error ne 'ok';
+    if ($should_check_page_names) {
+        for my $page_name (@pages) {
+            my $error = _check_page_name_is_ok($page_name);
+            throw($error) if $error ne 'ok';
+        }
     }
 
     my $final_revision_time_str = '';

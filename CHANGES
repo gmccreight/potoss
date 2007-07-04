@@ -1,3 +1,7 @@
+version 20070704_1
+Sped up the rss feed generation for the links search by removing
+the check for each page name's validity.
+
 version 20070703_1
 Added the rss feed for the page links search.
 
