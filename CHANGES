@@ -1,3 +1,6 @@
+version 20070703_1
+Added the rss feed for the page links search.
+
 version 20070702_1
 Removed the page name check from the recursive links processing.
 This greatly increases the speed of the processing.

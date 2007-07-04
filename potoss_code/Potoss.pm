@@ -381,6 +381,11 @@ sub PH_page_links {
     my $max_depth = $cgi->param('nm_max_depth') || 10;
     my $search_query = $cgi->param('nm_search_query') || '';
     my $sort_by = $cgi->param('nm_sort_by') || 'order';
+    my $mode = $cgi->param('nm_mode') || 'html';
+
+    if (! _is_in_set($mode, qw(html rss)) ) {
+        throw("mode must be html or rss");
+    }
 
     #untaint the search query
     $search_query .= '';
@@ -398,6 +403,8 @@ sub PH_page_links {
     @links = sort {$a->{$sort_by} <=> $b->{$sort_by}} @links;
 
     my %num_circular_seen = ();
+
+    my @after_search_pages = ();
 
     PAGE:
     for my $page (@links) {
@@ -442,6 +449,8 @@ sub PH_page_links {
 
             $num_pages_match_search++;
         }
+
+        push @after_search_pages, $page;
 
         my @colors = qw(eee ddd ccc bbb aaa 999);
         my $indenting = '';
@@ -495,9 +504,13 @@ sub PH_page_links {
         ? qq~<span style="color:red;">No matching results</span>~
         : $results_table;
 
+    my $rss_feed_icon = qq~<a href="./?PH_page_links&nm_page=$page_name&nm_search_query=$search_query&nm_max_depth=$max_depth&nm_sort_by=$sort_by&nm_mode=rss" style="float:right;">
+        <img src="./static/rss.jpg" height="12" width="12" border="0"/>
+    </a>~;
+
     my $body = qq~
         <h4>Links for: <a href="./?$page_name">$page_name</a></h4>
-        $maybe_search_results
+        $maybe_search_results $rss_feed_icon
         <form id="fr_search_links" method="post" action="./?" style="margin-bottom:20px;">
             <input type="hidden" name="PH_page_links" value="1">
             <input type="hidden" name="nm_page" value="$page_name">
@@ -508,7 +521,23 @@ sub PH_page_links {
         </form>
         $results_table
     ~;
-    hprint($body);
+
+    if ($mode eq 'html') {
+        hprint($body);
+    }
+    elsif ($mode eq 'rss') {
+        #the names of the pages with no circular references
+        my $pages_str =
+            join('-',
+                map({$_->{page_name}}
+                    grep({$_->{is_circular} == 0}
+                        @after_search_pages
+                    )
+                )
+            );
+
+        PH_rss($pages_str);
+    }
 }
 
 sub _regex_all_possible_links {
@@ -1043,7 +1072,7 @@ sub _internal_diff {
 
 sub PH_rss {
     require DateTime;
-    my $page_names = $cgi->param("nm_pages");
+    my $page_names = $cgi->param("nm_pages") || shift || '';
 
     my $MAX_NUM_REVISIONS = 20;
 
