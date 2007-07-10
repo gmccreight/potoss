@@ -1924,7 +1924,12 @@ sub PH_page_submit {
 
     _write_new_page_revision($page_name, $text);
 
-    do_redirect("./?$page_name");
+    if ($no_opts) {
+        do_redirect("./?PH_show_page&nm_page=$page_name$no_opts_str");
+    }
+    else {
+        do_redirect("./?$page_name");
+    }
 
     #show_page($page_name);
 }

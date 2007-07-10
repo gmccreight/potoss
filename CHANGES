@@ -1,3 +1,6 @@
+version 20070710_1
+A simple no_opts so that it remains after a page edit.
+
 version 20070704_2
 Added pruning to the page links list.  Added a couple of tests
 for it, too.
