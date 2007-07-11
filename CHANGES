@@ -1,3 +1,11 @@
+version 20070710_3
+Allow page links with a different label than the page name.
+
+version 20070710_2
+If you have no_opts specified, then it will propogate to pages
+which are linked from the current page.  Added several tests to
+make sure this happens, too.
+
 version 20070710_1
 A simple no_opts so that it remains after a page edit.
 

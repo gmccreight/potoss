@@ -564,15 +564,11 @@ sub PH_page_links {
 
 sub _regex_all_possible_links {
     my $orig_word = shift;
+    my $label = shift;
     my $these_are_links = shift;
 
-    my $stripped_word = $orig_word;
-
-    $stripped_word =~ s{\A \[}{}xms;
-    $stripped_word =~ s{\] \z}{}xms;
-
-    if (! $these_are_links->{$stripped_word}) {
-        $these_are_links->{$stripped_word} = {order => scalar(keys %{$these_are_links})};
+    if (! $these_are_links->{$orig_word}) {
+        $these_are_links->{$orig_word} = {order => scalar(keys %{$these_are_links})};
     }
 }
 
@@ -617,7 +613,7 @@ sub page_read_text_and_calculate_all_possible_links {
 
     my %all_possible_links = ();
 
-    $page_data =~ s{(\[[a-z_0-9]{5,}\])}{_regex_all_possible_links($1, \%all_possible_links)}ges;
+    $page_data =~ s{\[([a-z_0-9]{5,}):?([^\]]*)\]}{_regex_all_possible_links($1, $2, \%all_possible_links)}ges;
 
     return sort {$all_possible_links{$a}->{order} <=> $all_possible_links{$b}->{order}} keys %all_possible_links;
 
@@ -625,43 +621,52 @@ sub page_read_text_and_calculate_all_possible_links {
 
 sub _regex_process_words_for_links {
     my $orig_word = shift;
+    my $label = shift || $orig_word;
     my $linkable_pages = shift;
     my $alias_pages = shift;
-
-    my $stripped_word = $orig_word;
-
-    $stripped_word =~ s{\A \[}{}xms;
-    $stripped_word =~ s{\] \z}{}xms;
-
     my $these_are_not_links = shift;
     my $these_are_links = shift;
+    my $no_opts = shift;
 
-    if (exists $these_are_not_links->{$stripped_word}) {
+    if (exists $these_are_not_links->{$orig_word}) {
         return $orig_word;
     }
 
-    if ( exists $these_are_links->{$stripped_word}
-        or grep ({ /^$stripped_word$/ } @{$linkable_pages} ) ) {
-            $these_are_links->{$stripped_word} = 1;
-            return qq~<a href="./?$stripped_word">$stripped_word</a>~;
+    if ( exists $these_are_links->{$orig_word}
+        or grep ({ /^$orig_word$/ } @{$linkable_pages} ) ) {
+            $these_are_links->{$orig_word} = 1;
+
+            if ($no_opts) {
+                return qq~<a href="./?PH_show_page&nm_page=$orig_word&nm_no_opts=1">$label</a>~;
+            }
+            else {
+                return qq~<a href="./?$orig_word">$label</a>~;
+            }
     }
 
     # If the word matches one of the page aliases, check if the target
     # page allows linking.  If so, return a link to the alias, otherwise
     # return the original word with no link.
-    elsif (grep ({ /^$stripped_word$/ } @{$alias_pages} )) {
-        my $target_page = _is_page_alias_for($stripped_word);
+    elsif (grep ({ /^$orig_word$/ } @{$alias_pages} )) {
+        my $target_page = _is_page_alias_for($orig_word);
         if ( exists $these_are_links->{$target_page}
             or grep ({ /^$target_page$/ } @{$linkable_pages}) ) {
-                $these_are_links->{$stripped_word} = 1;
-                return qq~<a href="./?$stripped_word">$stripped_word</a>~;
+                $these_are_links->{$orig_word} = 1;
+
+            if ($no_opts) {
+                return qq~<a href="./?PH_show_page&nm_page=$orig_word&nm_no_opts=1">$label</a>~;
+            }
+            else {
+                return qq~<a href="./?$orig_word">$label</a>~;
+            }
+
         }
         else {
             return $orig_word;
         }
     }
     else {
-        $these_are_not_links->{$stripped_word} = 1;
+        $these_are_not_links->{$orig_word} = 1;
         return $orig_word;
     }
 }
@@ -894,7 +899,7 @@ sub show_page {
         my @linkable_pages = _get_linkable_pages();
         my %these_are_not_links = ();
         my %these_are_links = ();
-        $encoded_data =~ s{(\[[a-z_0-9]{5,}\])}{_regex_process_words_for_links($1, \@linkable_pages, \@alias_pages, \%these_are_not_links, \%these_are_links)}ges;
+        $encoded_data =~ s{\[([a-z_0-9]{5,}):?([^\]]*)\]}{_regex_process_words_for_links($1, $2, \@linkable_pages, \@alias_pages, \%these_are_not_links, \%these_are_links, $no_opts)}ges;
     }
 
     #gemhack 4 - replace potosstgz with a link to the code

@@ -17,7 +17,7 @@ use Test::More;
 use Test::WWW::Selenium;
 use Time::HiRes qw( usleep ); #a more high resolution sleep timer
 
-my $NUM_TESTS_PER_BROWSER = 135;
+my $NUM_TESTS_PER_BROWSER = 147;
 my $SELENIUM_SERVER_DIR =
     qq~"C:\\Program Files\\selenium-remote-control-0.9.1_nightly\\server"~;
 
@@ -25,6 +25,7 @@ my @BROWSERS = (
     { name => 'firefox',  should_test => 1 },
     { name => 'iexplore', should_test => 1 },
     { name => 'opera', should_test => 0 }, # works, but gives a little popup error.
+    #gemhack 2 would like to add safari
 );
 
 my @browsers_to_test = grep({$_->{should_test}} @BROWSERS);
@@ -75,12 +76,36 @@ for my $browser (@browsers_to_test) {
         browser_url => "http://$url/",
     );
 
+    #-------------------------------------------------------------------------
+    # Story:
+    # This is POT page which has been embedded in an iframe and has nm_no_opts
+    # specified to hide the options.  Make sure that the options stay hidden
+    # as you click around.
+
+    $sel->open_ok("/?PH_show_page&nm_page=potoss_test_link_tree_a_base&nm_no_opts=1");
+    $sel->is_text_present_ok("potoss_test_existing_but_not_linkable_to_page");
+    ok(! $sel->is_text_present("advanced options"), "advanced options not showing");
+
+    $sel->click_ok("link=potoss_test_link_tree_a_branch_a");
+    my_loads_ok();
+    ok(! $sel->is_text_present("advanced options"), "advanced options not showing - 1");
+
+    $sel->click_ok("myel_edit_link");
+    my_loads_ok();
+    ok(! $sel->is_text_present("advanced options"), "advanced options not showing - 2");
+
+    $sel->click_ok("//input[\@value='cancel']");
+    my_loads_ok();
+    ok(! $sel->is_text_present("advanced options"), "advanced options not showing - 3");
+
+    #-------------------------------------------------------------------------
+    # Story:
+    # A user looks at changes in an already existing page
 
     $sel->open_ok("${dir}potoss_saved_test");
     my_loads_ok();
     $sel->is_text_present_ok("edit this page");
     $sel->is_text_present_ok("this is change 11");
-
 
 
     $sel->click_ok("link=advanced options");
@@ -96,6 +121,9 @@ for my $browser (@browsers_to_test) {
     $sel->is_text_present_ok("this is change 10");
 
 
+    #-------------------------------------------------------------------------
+    # Story:
+    # A user looks at changes in an already existing page
 
     $sel->open_ok("${dir}potoss_wow"); #read only alias for potoss_saved_test
     my_loads_ok();
@@ -109,6 +137,11 @@ for my $browser (@browsers_to_test) {
     $sel->open_ok("${dir}PH_page_opts&nm_page=potoss_wow");
     my_loads_ok();
     $sel->is_text_present_ok("You can't view this page's options");
+
+    #-------------------------------------------------------------------------
+    # Story:
+    # A user looks for a page which doesn't exist, decides to create it and
+    # makes a couple of revisions
 
     $sel->open_ok("${dir}potoss_tmp_test");
     my_loads_ok();
@@ -259,6 +292,7 @@ for my $browser (@browsers_to_test) {
     $sel->click_ok("//input[\@value='cancel']");
     my_loads_ok();
     $sel->is_text_present_ok("You are looking at revision 9");
+    
 
     #-------------------------------------------------------------------------
     # Story:
