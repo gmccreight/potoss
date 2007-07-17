@@ -1,3 +1,6 @@
+version 20070717_2
+Forgot to escape single quotes in the diff rollovers.
+
 version 20070717_1
 Added rollovers for the diffs of the latest four revisions to
 the PH_links page.

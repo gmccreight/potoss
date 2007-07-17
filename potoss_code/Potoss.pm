@@ -1182,6 +1182,7 @@ sub _page_latest_revisions_diffs_html {
 
         $diff_text =~ s{\r\n}{<br>}g;
         $diff_text =~ s{\n}{<br>}g;
+        $diff_text =~ s{'}{\\'}g;
 
         my $days_old = -M $end_file;
         $diff_text = "revised: $days_old days ago<br><br>$diff_text";
