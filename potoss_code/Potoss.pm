@@ -532,7 +532,7 @@ sub PH_page_links {
     }
 
     my $body = qq~
-        <div id="myel_infbx_div" style="position:absolute; left:-1000px; top:0px; width:800px; background-color:#ccc;">&nbsp;</div>
+        <div id="myel_infbx_div" style="position:absolute; left:-1000px; top:0px; width:800px; background-color:#ddd; padding:6px;">&nbsp;</div>
         <script type="text/javascript">
 
             function infbxjs_HideInfoDiv () {
