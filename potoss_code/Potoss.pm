@@ -472,11 +472,14 @@ sub PH_page_links {
 
         my $prune = $prune_list . "-" . $page->{page_name};
 
+        my $diffs_html = _page_latest_revisions_diffs_html($page->{page_name});
+
         $rows .= qq~
             <tr>
                 <td style="padding:4px;">$indenting <a href="./?$page->{page_name}">$page->{page_name}$warning</a></td>
                 <td style="padding:4px;">$page->{modified}</td>
                 <td style="padding:4px;"><a href="./?PH_page_links&nm_page=$page_name&nm_search_query=$search_query&nm_max_depth=$max_depth&nm_prune_list=$prune&nm_sort_by=$sort_by">prune</a></td>
+                <td style="padding:4px;">$diffs_html</td>
             </tr>
         ~;
     }
@@ -489,6 +492,7 @@ sub PH_page_links {
         {title => "page", sort_by => "order", is_sortable => 1},
         {title => "days old", sort_by => "modified", is_sortable => 1},
         {title => "actions", is_sortable => 0},
+        {title => "revisions", is_sortable => 0},
     );
 
     my $heading_str = '';
@@ -528,6 +532,59 @@ sub PH_page_links {
     }
 
     my $body = qq~
+        <div id="myel_infbx_div" style="position:absolute; left:-1000px; top:0px; width:800px; background-color:#ccc;">&nbsp;</div>
+        <script type="text/javascript">
+
+            function infbxjs_HideInfoDiv () {
+              ps = document.getElementById('myel_infbx_div');
+              ps.style.left = "-1000px";
+            }
+
+            function infbxjs_ShowInfoDiv (obj, left_or_right_placement, info_text) {
+              xleft = infbxjs_findPosX(obj);
+              ytop = infbxjs_findPosY(obj);
+              ps = document.getElementById('myel_infbx_div');
+              ps.innerHTML = info_text;
+
+              if (left_or_right_placement == "right"){
+                ps.style.left = (xleft + 30) + "px";
+                ps.style.top = ytop + "px";
+              }
+              else if (left_or_right_placement == "left") {
+                ps.style.left = ((xleft - 15) - parseInt(ps.style.width)) + "px";
+                ps.style.top = ytop + "px";
+              }
+            }
+
+            function infbxjs_findPosX (obj) {
+              var curleft = 0;
+              if (obj.offsetParent) {
+                while (obj.offsetParent) {
+                  curleft += obj.offsetLeft
+                  obj = obj.offsetParent;
+                }
+              }
+              else if (obj.x) {
+                curleft += obj.x;
+              }
+              return curleft;
+            }
+
+            function infbxjs_findPosY (obj) {
+              var curtop = 0;
+              if (obj.offsetParent) {
+                while (obj.offsetParent) {
+                  curtop += obj.offsetTop
+                  obj = obj.offsetParent;
+                }
+              }
+              else if (obj.y) {
+                curtop += obj.y;
+              }
+              return curtop;
+            }
+        </script>
+            
         <h4>Links for: <a href="./?$page_name">$page_name</a></h4>
         $maybe_search_results $rss_feed_icon
         <form id="fr_search_links" method="post" action="./?" style="margin-bottom:20px;">
@@ -1103,6 +1160,50 @@ sub _internal_diff {
         $text_diffs .= "\n";
     }
     return $text_diffs;
+}
+
+sub _page_latest_revisions_diffs_html {
+    my $page_name = shift;
+
+    my $head_rev = get_page_HEAD_revision_number($page_name, 'cached');
+
+    my $num_revs_to_show = 4;
+
+    my $rev = $head_rev;
+
+    my @diffs = ();
+
+    while ($rev > 0) {
+        my $start_file = get_filename_for_revision($page_name, $rev - 1);
+        my $end_file = get_filename_for_revision($page_name, $rev);
+
+        my $diff = _diff_files($start_file, $end_file);
+        my $diff_text = _encode_entities($diff);
+
+        $diff_text =~ s{\r\n}{<br>}g;
+        $diff_text =~ s{\n}{<br>}g;
+
+        my $days_old = -M $end_file;
+        $diff_text = "revised: $days_old days ago<br><br>$diff_text";
+        
+        push @diffs, {rev => $rev, text => $diff_text};
+
+        $rev--;
+        if ($rev <= $head_rev - $num_revs_to_show) {
+            $rev = 0;
+        }
+    }
+
+    my $diffs_html = '';
+    for my $diff (@diffs) {
+        my $cursor_order_matters = 'cursor:pointer; cursor:hand;';
+        $diffs_html .= qq~
+        <span style="background-color:#ccc; padding:2px; margin-right:1px; $cursor_order_matters" onmouseover="infbxjs_ShowInfoDiv(this, 'right', '$diff->{text}');" onmouseout="infbxjs_HideInfoDiv(this);" >$diff->{rev}</span>
+        ~;
+    }
+
+    return $diffs_html;
+    
 }
 
 sub PH_rss {
