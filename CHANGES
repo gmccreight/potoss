@@ -1,3 +1,7 @@
+version 20070717_4
+Resolve page aliases when calculating diffs for a page
+for the rollovers in the links page.
+
 version 20070717_3
 Updated the style of the rollover box a bit.
 

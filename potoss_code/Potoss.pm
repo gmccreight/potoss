@@ -1165,6 +1165,8 @@ sub _internal_diff {
 sub _page_latest_revisions_diffs_html {
     my $page_name = shift;
 
+    $page_name = _resolve_alias($page_name) || $page_name;
+
     my $head_rev = get_page_HEAD_revision_number($page_name, 'cached');
 
     my $num_revs_to_show = 4;
