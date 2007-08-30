@@ -6,7 +6,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 43;
+use Test::More tests => 50;
 
 # Since you're in the testing mode, make any "throws" die with a lot of info.
 $ENV{POTOSS_THROW_DIES_WITH_MORE_INFO} = 1;
@@ -14,6 +14,28 @@ $ENV{POTOSS_THROW_DIES_WITH_MORE_INFO} = 1;
 use lib qw(potoss_code);
 chdir("../");
 require Potoss;
+
+
+#-----------------------------------------------------------------------------
+#-----------------------------------------------------------------------------
+diag("utilities");
+
+my $result = Potoss::semiRandText(30);
+is(length($result), 30, "produces right length output");
+
+$result =~ /^([a-j]+)$/;
+is(length($1), 30, "only contains a-j characters");
+
+
+#-----------------------------------------------------------------------------
+#-----------------------------------------------------------------------------
+diag("exists");
+
+ok(Potoss::_page_exists("potoss_test_link_tree_a_base"), "The page exists - part 1");
+is(Potoss::_page_exists("non_existant_page_flsnalknow"), 0, "The page does not exist");
+is(Potoss::_page_exists("fla slwo wofhne sosna "), 0, "The page does not exist (with spaces)");
+is(Potoss::_page_exists('Hella &3#@9@!)@&#'), 0, "The page does not exist (with spaces and more junk)");
+ok(Potoss::_page_exists("potoss_test_link_tree_a_branch_a_leaf_b"), "The page exists - part 2");
 
 #-----------------------------------------------------------------------------
 #-----------------------------------------------------------------------------
@@ -267,7 +289,8 @@ is( Potoss::_test_num_fopts(qr{$page_name}),
 is( Potoss::_test_num_pages(qr{$page_name}),
     0, "No pages match rand string - part 2" );
 
-Potoss::_tgz_a_page("potoss_saved_test");
+Potoss::_tgz_pages("tar_potoss_single_page", "potoss_saved_test");
+Potoss::_tgz_pages("tar_potoss_multiple_pages", qw(potoss_test_link_tree_a_branch_a potoss_test_link_tree_a_branch_b potoss_test_link_tree_a_branch_c));
 
 #-----------------------------------------------------------------------------
 #-----------------------------------------------------------------------------

@@ -211,9 +211,7 @@ sub PH_create_submit {
         return;
     }
 
-    my $filename = get_filename_for_revision($page_name);
-
-    if (-e $filename) {
+    if (_page_exists($page_name)) {
         my $error = qq~
             <p>Sorry, but that one already exists.  Please try another one.</p>
         ~;
@@ -386,8 +384,8 @@ sub PH_page_links {
 
         #throw($prune_list);
 
-    if (! _is_in_set($mode, qw(html rss)) ) {
-        throw("mode must be html or rss");
+    if (! _is_in_set($mode, qw(html rss tgz)) ) {
+        throw("mode must be html, rss, or tgz");
     }
 
     #untaint the search query
@@ -437,7 +435,7 @@ sub PH_page_links {
         if ($search_query) {
             my $filename = get_filename_for_revision($page->{page_name}, "HEAD");
 
-            if (! -e $filename) {
+            if (! _page_exists($page->{page_name})) {
                 page_does_not_exist($page->{page_name});
                 return;
             }
@@ -522,8 +520,12 @@ sub PH_page_links {
         ? qq~<span style="color:red;">No matching results</span>~
         : $results_table;
 
-    my $rss_feed_icon = qq~<a href="./?PH_page_links&nm_page=$page_name&nm_search_query=$search_query&nm_max_depth=$max_depth&nm_prune_list=$prune_list&nm_sort_by=$sort_by&nm_mode=rss" style="float:right;">
-        <img src="./static/rss.jpg" height="12" width="12" border="0"/>
+    my $rss_feed_icon = qq~<a href="./?PH_page_links&nm_page=$page_name&nm_search_query=$search_query&nm_max_depth=$max_depth&nm_prune_list=$prune_list&nm_sort_by=$sort_by&nm_mode=rss" style="margin-right:20px;">
+        rss feed <img src="./static/rss.jpg" height="12" width="12" border="0"/>
+    </a>~;
+
+    my $tgz_link = qq~<a href="./?PH_page_links&nm_page=$page_name&nm_search_query=$search_query&nm_max_depth=$max_depth&nm_prune_list=$prune_list&nm_sort_by=$sort_by&nm_mode=tgz">
+        create a backup tarball
     </a>~;
 
     my $unprune_all_link = '';
@@ -586,17 +588,22 @@ sub PH_page_links {
         </script>
             
         <h4>Links for: <a href="./?$page_name">$page_name</a></h4>
-        $maybe_search_results $rss_feed_icon
+        $maybe_search_results
+
         <form id="fr_search_links" method="post" action="./?" style="margin-bottom:20px;">
             <input type="hidden" name="PH_page_links" value="1">
             <input type="hidden" name="nm_page" value="$page_name">
             <input type="hidden" name="nm_prune_list" value="$prune_list">
             <input type="hidden" name="nm_sort_by" value="$sort_by">
-            search page contents for: <input type="text" name="nm_search_query" value="$search_query" style="width:200px;margin-right:20px;">
+            search pages for: <input type="text" name="nm_search_query" value="$search_query" style="width:200px;margin-right:20px;">
             max_depth: <input type="text" name="nm_max_depth" value="$max_depth" style="width:30px;margin-right:20px;">
             <input type="submit" name="nm_submit" value="search" class="form">
             $unprune_all_link
         </form>
+
+        <div style="margin-top:10px; margin-bottom:18px;">
+            <span style="margin-right:10px;">For the pages listed:</span> $rss_feed_icon $tgz_link
+        </div>
         
         $results_table
     ~;
@@ -604,7 +611,7 @@ sub PH_page_links {
     if ($mode eq 'html') {
         hprint($body);
     }
-    elsif ($mode eq 'rss') {
+    elsif ($mode eq 'rss' or $mode eq 'tgz') {
         #the names of the pages with no circular references
         my $pages_str =
             join('-',
@@ -615,7 +622,14 @@ sub PH_page_links {
                 )
             );
 
-        PH_rss($pages_str);
+        if ($mode eq 'rss') {
+            PH_rss($pages_str);
+        }
+
+        if ($mode eq 'tgz') {
+            PH_pages_tgz($pages_str);
+        }
+        
     }
 }
 
@@ -917,7 +931,7 @@ sub show_page {
         }
     }
 
-    if (! -e $filename) {
+    if (! _page_exists($page_name)) {
         page_does_not_exist($page_name);
         return;
     }
@@ -1671,7 +1685,7 @@ sub PH_page_opts {
 
             <div style="margin-bottom:30px;"><strong>Page Data</strong>
                 <p style="margin-left:20px;">Page as a .tgz file (includes all revisions and options)</p>
-                <p style="margin-left:20px;">Click <a href="./?PH_page_tgz&nm_page=$page_name">here</a> to create the tgz file.</p>
+                <p style="margin-left:20px;">Click <a href="./?PH_pages_tgz&nm_pages=$page_name">here</a> to create the tgz file.</p>
             </div>
 
             <div style="margin-bottom:30px;"><strong>Page Links</strong>
@@ -2043,25 +2057,94 @@ sub PH_page_submit {
     #show_page($page_name);
 }
 
-sub PH_page_tgz {
-    my $page_name = $cgi->param("nm_page");
-    _tgz_a_page($page_name);
+sub semiRandText {
+    my $length = shift;
+    my $result = "";
+    while (length($result) < $length){
+        my $int = int(rand(32000));
+        $int =~ tr/0-9/a-j/;
+        $result .= $int;
+        $result = substr($result, 0, $length);
+    }
+    return $result;
+}
+
+sub PH_pages_tgz {
+    my $page_names = $cgi->param("nm_pages") || shift;
+
+    my @pages = split(/-/, $page_names);
+
+    if (! @pages) {
+        throw('must have at least one page to tar and zip');
+    }
+
+    _all_pages_exist_or_throw('in PH_pages_tgz', @pages);
+
+    my $foldername = "tar_" . semiRandText(20);
+
+    _tgz_pages($foldername, @pages);
+
+    my $plural_s = (scalar(@pages) > 1) ? 's' : q[];
+    my $plural_ve = (scalar(@pages) > 1) ? 's' : 've';
+
     my $body = qq~
-        <p>The page (with all its options and revisions) has been turned into a tgz file (a zipped tar file)</p>
-        <p>You can download the file <a href="./tar_$page_name.tgz">here</a></p>
+        <p>The page$plural_s (with all the options and revisions) ha$plural_ve been turned into a tgz file (a zipped tar file)</p>
+        <p>You can download the file <a href="./$foldername.tgz">here</a></p>
     ~;
     hprint($body);
 }
 
-sub _tgz_a_page {
-    # This subroutine tars all the files associated with a page.
-
+sub _page_exists {
     my $page_name = shift;
-    my $error = _check_page_name_is_ok($page_name);
-    throw($error) if $error ne 'ok';
 
-    # put the tar file in the root dir
-    `cd $conf{CNF_TEXTS_DIR}; tar -cvzf "../../tar_$page_name.tgz" ${page_name}_[A-Z]*`;
+    if (! $page_name) {
+        return 0;
+    }
+
+    my $filename = get_filename_for_revision($page_name, "HEAD");
+
+    if (-e $filename) {
+        return 1;
+    }
+    else {
+        return 0;
+    }
+}
+
+sub _all_pages_exist_or_throw {
+    my $throw_message = shift;
+    my @pages = @_;
+
+    # Check that all the page names are OK
+    for my $page_name (@pages) {
+        if (! _page_exists($page_name)) {
+            throw("page $page_name doesn't exist - $throw_message");
+        }
+    }
+}
+
+sub _tgz_pages {
+    # For a set of pages, tar all the files associated with the pages.
+
+    my $foldername = shift;
+
+    my @pages = @_;
+
+    _all_pages_exist_or_throw('in _tgz_pages', @pages);
+
+    `mkdir $conf{CNF_ROOT_DIR}/$foldername`;
+
+    # Note, A-Z was interpolating into a case insensitive match when Perl
+    # shelled out.  Thus, we use every character instead of the A-Z shorthand.
+    my $capital_a_thru_z = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+    for my $page_name (@pages) {
+        `cp -a $conf{CNF_TEXTS_DIR}/${page_name}_[$capital_a_thru_z]* $conf{CNF_ROOT_DIR}/$foldername`;
+        # gemhack 4 - remove any subversion files... ugh.
+        `rm -rf $conf{CNF_ROOT_DIR}/$foldername/${page_name}_REVS/.svn`;
+    }
+
+    `cd $conf{CNF_ROOT_DIR}/$foldername; tar -cvzf "../$foldername.tgz" *; cd ..; rm -r $foldername`;
 }
 
 sub _write_new_page_revision {
