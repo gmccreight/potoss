@@ -938,10 +938,22 @@ sub show_page {
     
     $data = _read_file($filename) || qq~Nothing is in the page yet.  Click the "edit this page" link to add some text.~;
 
-    my $remove_border = 1;
+    my %opts = (
+        remove_border => 1,
+        parser => 'normal',
+    );
+
+    my $encoded_data = "";
 
     # Unless an option has been set to *not* wrap the text, wrap it.
-    if (! page_fopt($page_name, 'exists', "has_no_text_wrap")) {
+    if (page_fopt($resolved_page_name, 'exists', "use_wikicreole")) {
+        require Text::WikiCreole;
+        $encoded_data = Text::WikiCreole::creole_parse($data);
+        
+        $opts{parser} = 'wikicreole';
+    }
+    # Unless an option has been set to *not* wrap the text, wrap it.
+    elsif (! page_fopt($resolved_page_name, 'exists', "has_no_text_wrap")) {
         # gemhack 5 - The Text::Wrap module was patched by Gordon to remove
         # the unexpanding of tabs because it was buggy and we don't use tabs
         # in our textareas. [tag:patched]
@@ -950,14 +962,14 @@ sub show_page {
         
         # do not remove the border if it's wrapped, since the text will fit
         # inside of the border with no problems.
-        $remove_border = 0; 
+        $opts{remove_border} = 0;
     }
 
-    my $encoded_data = _encode_entities($data);
-
-    $encoded_data =~ s/ /&nbsp;/g;
-
-    $encoded_data =~ s/\n/<br>/g;
+    if ($opts{parser} eq 'normal') {
+        $encoded_data = _encode_entities($data);
+        $encoded_data =~ s/ /&nbsp;/g;
+        $encoded_data =~ s/\n/<br>/g;
+    }
 
     if ( page_fopt($resolved_page_name, 'exists', 'has_linking') ) {
 
@@ -1027,7 +1039,7 @@ sub show_page {
 
     hprint(
         $body,
-        {   remove_border        => $remove_border,
+        {   remove_border        => $opts{remove_border},
             remove_branding      => $remove_branding,
             remove_container_div => $remove_container_div,
             page_name            => $page_name,
@@ -1588,6 +1600,7 @@ sub PH_compact_page_opts {
         <p>$fopt_link_for{allows_incoming_links}</p>
 
         <p style="margin-top:20px;">$fopt_link_for{has_no_text_wrap}</p>
+        <p style="margin-top:20px;">$fopt_link_for{use_wikicreole}</p>
         ~;
 
 #    for my $key (keys %fopt_link_for) {
@@ -1651,6 +1664,10 @@ sub PH_page_opts {
 
             <div style="margin-bottom:40px;"><strong>Text Wrapping</strong>
                 <p style="margin-left:20px;">$fopt_link_for{"has_no_text_wrap"}</p>
+            </div>
+
+            <div style="margin-bottom:40px;"><strong>WikiCreole</strong>
+                <p style="margin-left:20px;">$fopt_link_for{"use_wikicreole"}</p>
             </div>
 
             <div style="margin-bottom:40px;"><strong>Notes about doing things faster</strong>
@@ -1842,6 +1859,17 @@ return (
             "The text has been <strong>wrapped</strong> at 80 characters",
             no_link => "<strong>wrap</strong> the text",
             yes_link => "<strong>unwrap</strong> the text",
+    },
+    use_wikicreole => {
+        level => 'more',
+        is_boolean => 1,
+        is_color => 0,
+        yes_message =>
+            "The text is now <strong>using</strong> the WikiCreole markup language",
+        no_message =>
+            "The text is now <strong>not</strong> using the WikiCreole markup language",
+            no_link => "do <strong>not</strong> use the WikiCreole markup language",
+            yes_link => "<strong>use</strong> the WikiCreole markup language",
     },
     remove_branding => {
         level => 'very',

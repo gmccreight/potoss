@@ -1,3 +1,7 @@
+version 20070912_1
+Added the Text::WikiCreole module and the option of using it to
+parse the html.
+
 version 20070829_1
 In the "links" view, allow backing up of all the currently viewed
 pages (and their options) to a zipped tarball.  Also, made the interface
