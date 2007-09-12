@@ -1,3 +1,7 @@
+version 20070912_2
+Fixed small bug in the text handling that was causing Text::WikiCreole
+to choke on making paragraphs.
+
 version 20070912_1
 Added the Text::WikiCreole module and the option of using it to
 parse the html.

@@ -948,8 +948,8 @@ sub show_page {
     # Unless an option has been set to *not* wrap the text, wrap it.
     if (page_fopt($resolved_page_name, 'exists', "use_wikicreole")) {
         require Text::WikiCreole;
+        $data =~ s{\r\n}{\n}g;
         $encoded_data = Text::WikiCreole::creole_parse($data);
-        
         $opts{parser} = 'wikicreole';
     }
     # Unless an option has been set to *not* wrap the text, wrap it.
