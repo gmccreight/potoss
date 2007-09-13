@@ -1,3 +1,6 @@
+version 20070913_1
+Added a message about the text using Creole, and added the cheat sheet.
+
 version 20070912_2
 Fixed small bug in the text handling that was causing Text::WikiCreole
 to choke on making paragraphs.

@@ -946,11 +946,11 @@ sub show_page {
     my $encoded_data = "";
 
     # Unless an option has been set to *not* wrap the text, wrap it.
-    if (page_fopt($resolved_page_name, 'exists', "use_wikicreole")) {
+    if (page_fopt($resolved_page_name, 'exists', "use_creole")) {
         require Text::WikiCreole;
         $data =~ s{\r\n}{\n}g;
         $encoded_data = Text::WikiCreole::creole_parse($data);
-        $opts{parser} = 'wikicreole';
+        $opts{parser} = 'creole';
     }
     # Unless an option has been set to *not* wrap the text, wrap it.
     elsif (! page_fopt($resolved_page_name, 'exists', "has_no_text_wrap")) {
@@ -1467,6 +1467,15 @@ sub PH_edit {
 
     my $cancel_url = "./?PH_show_page&nm_page=$page_name&nm_rev=$revision$no_opts_uri";
 
+    my $type_of_text = (page_fopt($page_name, 'exists', "use_creole"))
+        ? qq~<p style="color:#339" style="margin-top: 40px;">
+            This page uses <em><strong>Creole</strong></em>, a standardized
+            wiki markup.
+            Click <a href="./static/creole_cheatsheet.jpg" target="_blank">here</a>
+            for a cheat sheet.</p>~
+        : qq~<p style="color:#339">Use just plain text.  There's no fanciness here.</p>~
+        ;
+
     my $body = qq~
         $revision_alert
         $first_edit_alert
@@ -1476,7 +1485,7 @@ sub PH_edit {
             <input type="hidden" name="nm_no_opts" value="$no_opts">
             <input type="hidden" name="nm_head_revision_number_at_edit_start" value="$head_revision_number">
 
-            <p style="color:#339">Use just plain text.  There's no fanciness here.</p>
+            $type_of_text
 
             $blowfish_buttons
 
@@ -1600,7 +1609,7 @@ sub PH_compact_page_opts {
         <p>$fopt_link_for{allows_incoming_links}</p>
 
         <p style="margin-top:20px;">$fopt_link_for{has_no_text_wrap}</p>
-        <p style="margin-top:20px;">$fopt_link_for{use_wikicreole}</p>
+        <p style="margin-top:20px;">$fopt_link_for{use_creole}</p>
         ~;
 
 #    for my $key (keys %fopt_link_for) {
@@ -1666,8 +1675,8 @@ sub PH_page_opts {
                 <p style="margin-left:20px;">$fopt_link_for{"has_no_text_wrap"}</p>
             </div>
 
-            <div style="margin-bottom:40px;"><strong>WikiCreole</strong>
-                <p style="margin-left:20px;">$fopt_link_for{"use_wikicreole"}</p>
+            <div style="margin-bottom:40px;"><strong>Creole</strong>
+                <p style="margin-left:20px;">$fopt_link_for{"use_creole"}</p>
             </div>
 
             <div style="margin-bottom:40px;"><strong>Notes about doing things faster</strong>
@@ -1860,16 +1869,16 @@ return (
             no_link => "<strong>wrap</strong> the text",
             yes_link => "<strong>unwrap</strong> the text",
     },
-    use_wikicreole => {
+    use_creole => {
         level => 'more',
         is_boolean => 1,
         is_color => 0,
         yes_message =>
-            "The text is now <strong>using</strong> the WikiCreole markup language",
+            "The text is now <strong>using</strong> the Creole markup language",
         no_message =>
-            "The text is now <strong>not</strong> using the WikiCreole markup language",
-            no_link => "do <strong>not</strong> use the WikiCreole markup language",
-            yes_link => "<strong>use</strong> the WikiCreole markup language",
+            "The text is now <strong>not</strong> using the Creole markup language",
+            no_link => "do <strong>not</strong> use the Creole markup language",
+            yes_link => "<strong>use</strong> the Creole markup language",
     },
     remove_branding => {
         level => 'very',
