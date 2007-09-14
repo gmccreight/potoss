@@ -1,6 +1,4 @@
-This page has two separately sortable tables.
-
-\\\\
+This page has two separately sortable tables. 
 
 
 |=id |=first_name |=last_name |=phone
@@ -8,7 +6,6 @@ This page has two separately sortable tables.
 | 2  | Homer      | Simpson   | 555-555-3751
 | 3  | Green      | Hornet    | 555-555-9032
 
-\\\\
 
 |=id |=city
 | 1  | Las Vegas

@@ -944,6 +944,7 @@ sub show_page {
     );
 
     my $encoded_data = "";
+    my $add_sortable_table_js = 0;
 
     # Unless an option has been set to *not* wrap the text, wrap it.
     if (page_fopt($resolved_page_name, 'exists', "use_creole")) {
@@ -951,6 +952,8 @@ sub show_page {
         $data =~ s{\r\n}{\n}g;
         $encoded_data = Text::WikiCreole::creole_parse($data);
         $opts{parser} = 'creole';
+        $add_sortable_table_js = 1;
+        $encoded_data =~ s/<table>/<table class="sortable">/g;
     }
     # Unless an option has been set to *not* wrap the text, wrap it.
     elsif (! page_fopt($resolved_page_name, 'exists', "has_no_text_wrap")) {
@@ -1045,6 +1048,7 @@ sub show_page {
             page_name            => $page_name,
             add_keys_js          => 1,
             add_blowfish_js      => $show_encryption_buttons,
+            add_sortable_table_js => $add_sortable_table_js,
         }
     );
 
@@ -2422,6 +2426,11 @@ sub hprint {
         ~;
     }
 
+    my $maybe_sortable_table = '';
+    if ($arg_ref->{add_sortable_table_js}) {
+        $maybe_sortable_table = qq~<script src="./static/sorttable.js" type="text/javascript"></script>~;
+    }
+
     my $maybe_keys_palette_div = "";
     if ($arg_ref->{add_keys_js}) {
 
@@ -2520,6 +2529,7 @@ sub hprint {
     $maybe_create_page_js
     $maybe_blowfish_js
     $maybe_keys_js
+    $maybe_sortable_table
     </head>
     <body style="margin-left:10px;" onload="if(document.getElementById('myel_text_area')){document.getElementById('myel_text_area').focus()}">
     $start_container_div
