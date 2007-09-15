@@ -947,7 +947,7 @@ sub show_page {
     my $add_sortable_table_js = 0;
 
     # Unless an option has been set to *not* wrap the text, wrap it.
-    if (page_fopt($resolved_page_name, 'exists', "use_creole")) {
+    if (page_fopt($resolved_page_name, 'exists', 'use_creole')) {
         require Text::WikiCreole;
         $data =~ s{\r\n}{\n}g;
         $encoded_data = Text::WikiCreole::creole_parse($data);
@@ -2203,6 +2203,16 @@ sub _write_new_page_revision {
     # Now write the revision file to the ${page_name}_REVS folder
 
     my $rev = get_page_HEAD_revision_number($page_name, 'cached') + 1;
+
+    # If this page is just being created, then see if it should default to
+    # being formatted as creole.
+    if ($rev == 0
+        && exists $conf{CNF_DEFAULT_PAGE_FORMAT}
+        && $conf{CNF_DEFAULT_PAGE_FORMAT} eq 'creole') {
+
+        page_fopt($page_name, 'create', 'use_creole');
+
+    }
 
     my $page_rev = "${page_name}_R$rev";
 

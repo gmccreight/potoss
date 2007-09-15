@@ -22,6 +22,8 @@ our %conf = ();
 $conf{CNF_SITE_READABLE_NAME} = 'page of text open source software . com';
 $conf{CNF_SITE_BASE_URL} = 'www.potosssite.com';
 
+$conf{CNF_DEFAULT_PAGE_FORMAT} = 'text'; #text or creole
+
 $conf{CNF_STYLE_SHEET} = './static/style.css';
 $conf{CNF_ROOT_DIR} = '.';
 $conf{CNF_DATA_DIR} = $conf{CNF_ROOT_DIR} . '/potoss_data';
@@ -82,6 +84,11 @@ for my $k (sort {length($conf{$a}) <=> length($conf{$b})}
     my $dir = $conf{$k};
     next if -d $dir;
     die "Config directory $k doesn't exist at $dir!\n";
+}
+
+if ($conf{CNF_DEFAULT_PAGE_FORMAT} ne 'text'
+    && $conf{CNF_DEFAULT_PAGE_FORMAT} ne 'creole') {
+    die "Config: Default page format must be text or creole";
 }
 
 1;
