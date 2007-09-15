@@ -1,3 +1,7 @@
+version 20070915_2
+Made the "create a new page of x" message pay attention to the
+CNF_DEFAULT_PAGE_FORMAT variable.
+
 version 20070915_1
 Added the CNF_DEFAULT_PAGE_FORMAT variable, which lets you specify
 either text or creole.

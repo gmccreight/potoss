@@ -70,10 +70,15 @@ sub main {
 }
 
 sub homepage {
+    
+    my $type_of_page = (exists $conf{CNF_DEFAULT_PAGE_FORMAT})
+        ? $conf{CNF_DEFAULT_PAGE_FORMAT}
+        : 'text';
+    
     my $body = qq~
         <p>Welcome!</p>
 
-        <a href="./?PH_create">create a new <span class="pot">page of text</span></a> to edit by yourself or with others
+        <a href="./?PH_create">create a new <span class="pot">page of $type_of_page</span></a> to edit by yourself or with others
 
         <p>or</p>
 
