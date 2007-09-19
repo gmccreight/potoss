@@ -1,3 +1,8 @@
+version 20070918_1
+In the links view, don't show circular linked page names if you're
+looking at a "recent changes" style listing.  They only make sense
+to show in the hierarchical listing.
+        
 version 20070915_2
 Made the "create a new page of x" message pay attention to the
 CNF_DEFAULT_PAGE_FORMAT variable.

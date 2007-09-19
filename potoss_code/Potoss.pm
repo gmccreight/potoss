@@ -418,6 +418,15 @@ sub PH_page_links {
 
     PAGE:
     for my $page (@links) {
+
+        # Don't show circular linked page names if you're looking
+        # at a "recent changes" style listing.  They only make sense
+        # to show in the hierarchical listing.
+
+        if ($sort_by eq 'modified' && $page->{is_circular}) {
+            next PAGE;
+        }
+
         my $warning = '';
 
         if ($page->{is_circular}) {
