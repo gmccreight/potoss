@@ -1,3 +1,7 @@
+version 20070919_1
+Only add the table sorting javascript if there is actually a table
+in the rendered Creole.
+
 version 20070918_1
 In the links view, don't show circular linked page names if you're
 looking at a "recent changes" style listing.  They only make sense

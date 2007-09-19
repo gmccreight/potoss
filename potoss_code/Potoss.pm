@@ -966,7 +966,7 @@ sub show_page {
         $data =~ s{\r\n}{\n}g;
         $encoded_data = Text::WikiCreole::creole_parse($data);
         $opts{parser} = 'creole';
-        $add_sortable_table_js = 1;
+        $add_sortable_table_js = 1 if $encoded_data =~ /<table>/;
         $encoded_data =~ s/<table>/<table class="sortable">/g;
     }
     # Unless an option has been set to *not* wrap the text, wrap it.
