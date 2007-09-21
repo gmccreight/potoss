@@ -1224,11 +1224,14 @@ sub _page_latest_revisions_diffs_html {
         my $end_file = get_filename_for_revision($page_name, $rev);
 
         my $diff = _diff_files($start_file, $end_file);
+
+        # do this step before encoding entries
+        $diff =~ s{'}{\\'}g;
+
         my $diff_text = _encode_entities($diff);
 
         $diff_text =~ s{\r\n}{<br>}g;
         $diff_text =~ s{\n}{<br>}g;
-        $diff_text =~ s{'}{\\'}g;
 
         my $days_old = -M $end_file;
         $diff_text = "revised: $days_old days ago<br><br>$diff_text";

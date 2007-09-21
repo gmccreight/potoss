@@ -1,3 +1,7 @@
+version 20070921_1
+Properly escape single quotes in the diff rollovers in the
+"links" view.
+
 version 20070919_1
 Only add the table sorting javascript if there is actually a table
 in the rendered Creole.
