@@ -223,18 +223,11 @@ sub PH_create_submit {
         PH_create($error);
         return;
     }
-        
-    my $body = qq~
-        <p style="color:#696;">Great!</p>
-        <p>The URL to the new page is <a id="myel_new_page" href="./?$page_name">http://$conf{CNF_SITE_BASE_URL}/?$page_name</a></p>
-        <p><span style="color:red;">Don't lose the URL</span>.  It functions like a password.</p>
-        <p>This is the URL which you will give to people who you want to edit the page with.</p>
-        <p>You should <strong>bookmark it</strong> so you don't forget it.</p>
-        
-    ~;
+
     _write_new_page_revision($page_name, '');
 
-    hprint($body);
+    do_redirect("./?$page_name");
+
 }
 
 sub _check_page_name_is_ok {
@@ -949,8 +942,19 @@ sub show_page {
         page_does_not_exist($page_name);
         return;
     }
+
+    my $page_creation_message = '';
+    if (get_page_HEAD_revision_number($resolved_page_name, 'cached') == 0) {
+        $page_creation_message = qq~
+            <div style="background-color:#fee; padding:6px;">$conf{CNF_NEW_PAGE_MESSAGE}</div>
+        ~;
+    }
+
+    my $empty_page_text = ($conf{CNF_DEFAULT_EMPTY_PAGE_MESSAGE})
+        ? $conf{CNF_DEFAULT_EMPTY_PAGE_MESSAGE}
+        : qq~Nothing is in the page yet.  Click the "edit this page" link to add some text.~;
     
-    $data = _read_file($filename) || qq~Nothing is in the page yet.  Click the "edit this page" link to add some text.~;
+    $data = _read_file($filename) || $empty_page_text;
 
     my %opts = (
         remove_border => 1,
@@ -1042,6 +1046,7 @@ sub show_page {
     my $bar_color_hex = page_fopt($page_name, 'get', 'bar_color_hex') || 'eee';
 
     $body = qq~
+        $page_creation_message
         $rss_feed_icon
         <p style="margin-bottom:30px;background-color:#$bar_color_hex;">
             $edit
@@ -2309,7 +2314,7 @@ sub get_page_HEAD_revision_number {
         }
     }
 
-    #gemhack 1 - If there are more than 10,000,000 revisions, this will fail.
+    #gemhack 3 - If there are more than 10,000,000 revisions, this will fail.
     for my $revision (0..10_000_000) {
         my $filename = "$conf{CNF_TEXTS_DIR}/${page_name}_REVS/${page_name}_R$revision";
         if (! -e $filename){

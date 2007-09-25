@@ -24,6 +24,19 @@ $conf{CNF_SITE_BASE_URL} = 'www.potosssite.com';
 
 $conf{CNF_DEFAULT_PAGE_FORMAT} = 'text'; #text or creole
 
+$conf{CNF_DEFAULT_EMPTY_PAGE_MESSAGE} =
+    qq~
+    Nothing is in the page yet.
+    Click the "edit this page" link to add some text.
+    ~; 
+
+$conf{CNF_NEW_PAGE_MESSAGE} = qq~
+    <div style="background-color:#fee;">
+        <p>Congratulations, you've created a new page!</p>
+        <p>You should <strong>bookmark this page</strong> so you don't forget its URL.</p>
+    </div>
+~;
+
 $conf{CNF_STYLE_SHEET} = './static/style.css';
 $conf{CNF_ROOT_DIR} = '.';
 $conf{CNF_DATA_DIR} = $conf{CNF_ROOT_DIR} . '/potoss_data';

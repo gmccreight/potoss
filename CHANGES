@@ -1,3 +1,7 @@
+version 20070924_1
+Removed one of the creation pages, so it goes directly to the page
+after creating it.
+
 version 20070921_1
 Properly escape single quotes in the diff rollovers in the
 "links" view.
