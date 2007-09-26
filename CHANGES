@@ -1,3 +1,8 @@
+version 20070926_1
+Updated the "find" page so that it is programmatic, but you can
+still ask the site administrator if you're still unable to find
+the page.
+
 version 20070924_1
 Removed one of the creation pages, so it goes directly to the page
 after creating it.

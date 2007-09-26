@@ -82,18 +82,18 @@ sub homepage {
 
         <p>or</p>
 
-        <a href="./?PH_help_find">help me find a page I already created</a>
+        <a href="./?PH_find">find a page I previously created</a>
     ~;
     hprint($body);
 }
 
-sub PH_help_find {
+sub PH_help_with_find {
     my $body = qq~
 
         <p style="margin-bottom:20px;">This form will send an email to a real person ($conf{CNF_ADMIN_FULL_NAME}... that's me!)</p>
 
-        <form id="fr_create" method="post" action="./?">
-            <input type="hidden" name="PH_help_find_submit" value="1">
+        <form id="fr_help_find" method="post" action="./?">
+            <input type="hidden" name="PH_help_with_find_submit" value="1">
             
             <div style="margin-bottom:8px;">What is your email address?</div>
             <div style="margin-bottom:20px;"><input type="text" name="nm_from_address" value="" class="form" style="width:200px"></div>
@@ -107,7 +107,7 @@ sub PH_help_find {
     hprint($body);
 }
 
-sub PH_help_find_submit {
+sub PH_help_with_find_submit {
 
     require Mail::Sendmail;
 
@@ -143,6 +143,85 @@ sub PH_help_find_submit {
     }
 
     #$body .= "\n<br />\$Mail::Sendmail::log says:\n<br /><br /><br /><br />", $Mail::Sendmail::log;
+
+    hprint($body);
+}
+
+sub PH_find {
+    my $message = shift || '';
+
+    my $email_help_message = ($message)
+        ? qq~<p style="margin-top:60px; background-color:#fee; padding:10px;">
+            If you can't find the page, you can ask the site administrator for help using <a href="./?PH_help_with_find">this form</a>.
+        </p>~
+        : '';
+
+    my $word_0 = $cgi->param("nm_word_0") || '';
+    my $word_1 = $cgi->param("nm_word_1") || '';
+    my $word_2 = $cgi->param("nm_word_2") || '';
+
+    $message = ($message)
+        ? qq~<div style="background-color:#fcc; margin-bottom:20px; padding:4px;">$message</div>~
+        : qq~<p style="margin-bottom:10px;">Find your lost page:</p>~;
+
+    my $body = qq~
+        $message
+        
+        <form id="fr_find" method="post" action="./?">
+            <input type="hidden" name="PH_find_submit" value="1">
+            
+            <div style="margin-bottom:8px;">What are three unique, alphanumeric words which are longer than four characters in the page's contents?</div>
+            <div style="margin-bottom:10px;"><input type="text" name="nm_word_0" value="$word_0" class="form" style="width:100px"> <span style="background-color:#fcc; padding:2px;">cannot</span> be in dictionary</div>
+            <div style="margin-bottom:10px;"><input type="text" name="nm_word_1" value="$word_1" class="form" style="width:100px"> <span style="background-color:#fcc; padding:2px;">cannot</span> be in dictionary</div>
+            <div style="margin-bottom:10px;"><input type="text" name="nm_word_2" value="$word_2" class="form" style="width:100px"> <span style="background-color:#cfc; padding:2px;">may</span> be in dictionary</div>
+
+            <div><input type="submit" name="nm_submit" value="Find It!" class="form"></div>
+        </form>
+
+        $email_help_message
+    ~;
+    hprint($body);
+    die; #because this is sometimes called numerous times.
+}
+
+sub PH_find_submit {
+
+    my $was_slowed_down = _slow_down_if_more_guesses_than(5); #[tag:security] [tag:privacy]
+
+    my @words = ();
+
+    for my $num (0..2) {
+        my $word = $cgi->param("nm_word_$num") || '';
+        my $easy_position = $num + 1;
+        PH_find("word $easy_position is empty") if ! $word;
+        PH_find("word $easy_position, $word, contains non-alphanumeric characters") if $word !~ /^[a-zA-Z0-9]+$/xms;
+        PH_find("word $easy_position, $word, is too short") if length($word) < 5;
+        if ($num < 2) {
+            PH_find("word $easy_position, $word, is in the dictionary") if _is_in_dictionary($word);
+        }
+        push @words, $word;
+    }
+
+    my %num_words = map({$_ => 1} @words);
+    PH_find("some of the words are the same") if scalar(keys %num_words) < 3;
+    
+    my $NOT_ALNUM = "[^a-zA-Z0-9]*";
+
+    my @pages = `cd $conf{CNF_TEXTS_DIR}; ls *_HEAD | xargs grep -il "$NOT_ALNUM$words[0]$NOT_ALNUM" | xargs grep -il "$NOT_ALNUM$words[1]$NOT_ALNUM" | xargs grep -il "$NOT_ALNUM$words[2]$NOT_ALNUM"`;
+
+    if (scalar(@pages) < 1) {
+        PH_find("No matches found.");
+    }
+    if (scalar(@pages) > 1) {
+        PH_find("More than one page matches, so we can't reveal them.  Try refining your search.");
+    }
+
+    my $page = $pages[0];
+    $page =~ s/_HEAD$//;
+
+    my $body = qq~
+        A single matching page was found.  Click <a href="./?$page">here</a> to go to it.
+    ~;
 
     hprint($body);
 }
@@ -1080,7 +1159,7 @@ sub _get_alias_pages {
 sub page_does_not_exist {
     my $page_name = shift;
 
-    _slow_down_if_too_many_guesses();
+    _slow_down_if_more_guesses_than(3); # [tag:security] [tag:privacy]
 
     my $body = qq~
         <p style="color:red;">This page doesn't exist.</p>
@@ -1088,7 +1167,7 @@ sub page_does_not_exist {
 
         <p>or</p>
 
-        <a href="./?PH_help_find">help me find a page I already created</a>
+        <a href="./?PH_find">find a page I previously created</a>
 
     ~;
 
@@ -1096,7 +1175,7 @@ sub page_does_not_exist {
 
 }
 
-sub _clear_old_page_name_guesses {
+sub _clear_old_guess_ip_addresses {
     # Clear all guesses which are older than about a minute.  Return
     # a list of all the files which were cleared.
     # If the person was really trying to hack the site, they would be
@@ -1114,13 +1193,15 @@ sub _clear_old_page_name_guesses {
     return @guesses_cleared;
 }
 
-sub _slow_down_if_too_many_guesses {
+sub _slow_down_if_more_guesses_than {
     # Subtly slow down the response if there are too many guesses from the
     # same IP address.  This is to try to avoid any kind of a brute force
     # attack from a single IP address.
     # [tag:security] [tag:hacking] [tag:hacker]
 
-    _clear_old_page_name_guesses();
+    my $slow_after_how_many_guesses = shift;
+
+    _clear_old_guess_ip_addresses();
 
     my $ip_address_of_guess = $ENV{REMOTE_ADDR};
 
@@ -1139,9 +1220,13 @@ sub _slow_down_if_too_many_guesses {
     # allow for three wrong guesses before starting to affect performance.
     # gemhack 4 - will "idling" the Perl script negatively affect the web
     # server's ability to serve more requests?
-    if ($num_guesses > 3) {
-        sleep 2 * ($num_guesses - 3);
+    my $was_slowed_down = 0;
+    if ($num_guesses > $slow_after_how_many_guesses) {
+        sleep 2 * ($num_guesses - $slow_after_how_many_guesses);
+        $was_slowed_down = 1;
     }
+
+    return $was_slowed_down;
 }
 
 #sub PH_create_readonly_alias {

@@ -297,7 +297,7 @@ Potoss::_tgz_pages("tar_potoss_multiple_pages", qw(potoss_test_link_tree_a_branc
 diag("page name guesses");
 
 # Similate writing an older file so that it gets cleared by the
-# _clear_old_page_name_guesses subroutine.
+# _clear_old_guess_ip_addresses subroutine.
 my $older_file = "$Potoss::conf{CNF_CACHES_DIR}/guess_12_34_56_78";
 Potoss::_write_file($older_file, '3');
 
@@ -308,7 +308,7 @@ utime($older_time, $older_time, $older_file);
 my $newer_file = "$Potoss::conf{CNF_CACHES_DIR}/guess_90_12_34_56";
 Potoss::_write_file($newer_file, '3');
 
-my @guesses_cleared = Potoss::_clear_old_page_name_guesses();
+my @guesses_cleared = Potoss::_clear_old_guess_ip_addresses();
 ok( grep( {/guess_12_34_56_78/} @guesses_cleared ),
     "clears the older 12_34_56_78 guess"
 );
