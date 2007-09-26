@@ -213,8 +213,6 @@ sub runtests {
     $sel->is_text_present_ok("This page doesn't exist");
     $sel->click_ok("link=create it as a new page");
     $self->my_loads_ok();
-    $sel->click_ok("id=myel_new_page");
-    $self->my_loads_ok();
     $sel->is_text_present_ok("edit this page");
     $sel->click_ok("link=edit this page");
     $self->my_loads_ok();
@@ -247,8 +245,6 @@ sub runtests {
     $self->my_loads_ok();
     $sel->is_text_present_ok("This page doesn't exist");
     $sel->click_ok("link=create it as a new page");
-    $self->my_loads_ok();
-    $sel->click_ok("id=myel_new_page");
     $self->my_loads_ok();
     $sel->is_text_present_ok("edit this page");
     $sel->click_ok("link=edit this page");

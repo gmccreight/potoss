@@ -29,7 +29,7 @@ unless ( $child_pid = fork() ) {
 
 sleep 2;
 
-use Test::More tests => 95;
+use Test::More tests => 91;
 
 use Test::WWW::Mechanize;
 my $mech = Test::WWW::Mechanize->new();

@@ -148,8 +148,6 @@ for my $browser (@browsers_to_test) {
     $sel->is_text_present_ok("This page doesn't exist");
     $sel->click_ok("link=create it as a new page");
     my_loads_ok();
-    $sel->click_ok("id=myel_new_page");
-    my_loads_ok();
     $sel->is_text_present_ok("edit this page");
     $sel->click_ok("link=edit this page");
     my_loads_ok();
@@ -181,8 +179,6 @@ for my $browser (@browsers_to_test) {
     my_loads_ok();
     $sel->is_text_present_ok("This page doesn't exist");
     $sel->click_ok("link=create it as a new page");
-    my_loads_ok();
-    $sel->click_ok("id=myel_new_page");
     my_loads_ok();
     $sel->is_text_present_ok("edit this page");
     $sel->click_ok("link=edit this page");

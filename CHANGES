@@ -1,3 +1,7 @@
+version 20070926_2
+Updated the tests to reflect the fact that the one of the creation
+pages has been removed.
+
 version 20070926_1
 Updated the "find" page so that it is programmatic, but you can
 still ask the site administrator if you're still unable to find
