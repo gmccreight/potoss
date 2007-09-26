@@ -17,7 +17,7 @@ use Test::More;
 use Test::WWW::Selenium;
 use Time::HiRes qw( usleep ); #a more high resolution sleep timer
 
-my $NUM_TESTS_PER_BROWSER = 147;
+my $NUM_TESTS_PER_BROWSER = 143;
 my $SELENIUM_SERVER_DIR =
     qq~"C:\\Program Files\\selenium-remote-control-0.9.1_nightly\\server"~;
 
