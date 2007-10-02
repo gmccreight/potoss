@@ -264,7 +264,7 @@ sub runtests {
 
     #-------------------------------------------------------------------------
     # Story:
-    # Try to create a page name which is in the dictionary
+    # Try to create a page name that is in the dictionary
     $sel->open_ok("${dir}PH_create");
     $sel->is_text_present_ok("like the page name");
     $sel->type_ok("nm_page", "queen");
@@ -274,7 +274,7 @@ sub runtests {
 
     #-------------------------------------------------------------------------
     # Story:
-    # Try to create a page which already exists
+    # Try to create a page that already exists
     $sel->open_ok("${dir}PH_create");
     $sel->is_text_present_ok("like the page name");
     $sel->type_ok("nm_page", "potoss_saved_test");

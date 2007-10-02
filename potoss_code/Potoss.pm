@@ -170,7 +170,7 @@ sub PH_find {
         <form id="fr_find" method="post" action="./?">
             <input type="hidden" name="PH_find_submit" value="1">
             
-            <div style="margin-bottom:8px;">What are three unique, alphanumeric words which are longer than four characters in the page's contents?</div>
+            <div style="margin-bottom:8px;">What are three unique, alphanumeric words that are longer than four characters in the page's contents?</div>
             <div style="margin-bottom:10px;"><input type="text" name="nm_word_0" value="$word_0" class="form" style="width:100px"> <span style="background-color:#fcc; padding:2px;">cannot</span> be in dictionary</div>
             <div style="margin-bottom:10px;"><input type="text" name="nm_word_1" value="$word_1" class="form" style="width:100px"> <span style="background-color:#fcc; padding:2px;">cannot</span> be in dictionary</div>
             <div style="margin-bottom:10px;"><input type="text" name="nm_word_2" value="$word_2" class="form" style="width:100px"> <span style="background-color:#cfc; padding:2px;">may</span> be in dictionary</div>
