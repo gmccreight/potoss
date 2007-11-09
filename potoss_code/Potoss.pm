@@ -676,12 +676,12 @@ sub PH_page_links {
         <h4>Links for: <a href="./?$page_name">$page_name</a></h4>
         $maybe_search_results
 
-        <form id="fr_search_links" method="post" action="./?" style="margin-bottom:20px;">
+        <form name="f" id="fr_search_links" method="post" action="./?" style="margin-bottom:20px;">
             <input type="hidden" name="PH_page_links" value="1">
             <input type="hidden" name="nm_page" value="$page_name">
             <input type="hidden" name="nm_prune_list" value="$prune_list">
             <input type="hidden" name="nm_sort_by" value="$sort_by">
-            search pages for: <input type="text" name="nm_search_query" value="$search_query" style="width:200px;margin-right:20px;">
+            search pages for: <input type="text" id="myel_search_query" name="nm_search_query" value="$search_query" style="width:200px;margin-right:20px;">
             max_depth: <input type="text" name="nm_max_depth" value="$max_depth" style="width:30px;margin-right:20px;">
             <input type="submit" name="nm_submit" value="search" class="form">
             $unprune_all_link
@@ -2378,8 +2378,78 @@ sub _is_page_alias_for {
         return $target_page_name;
     }
 
+    my $deactivated_alias_file = $filename . "_ALIAS_DEACTIVATED";
+
+    if (-e $deactivated_alias_file){
+        throw("this alias has been deactivated");
+    }
+
     return 0;
 }
+
+#sub _update_alias {
+#    my $page_name = shift;
+#    my $mode = shift;
+#
+#    if (! _is_in_set($mode, qw(deactivate reactivate)) ) {
+#        throw("mode must be deactivate or reactivate");
+#    }
+#
+#    my $filename = "$conf{CNF_TEXTS_DIR}/$page_name";
+#    my $alias_file = $filename . "_ALIAS";
+#    my $deactivated_alias_file = $filename . "_ALIAS_DEACTIVATED";
+#
+#    if ($mode eq 'deactivate') {
+#        if (-e $deactivated_alias_file) {
+#            throw("the alias is already deactivated");
+#        }
+#
+#        if (! -e $alias_file){
+#            throw("the alias file does not exist");
+#        }
+#
+#        `mv $alias_file $deactivated_alias_file`;
+#    }
+#    elsif ($mode eq 'reactivate') {
+#        if (-e $alias_file) {
+#            throw("the alias is already activated");
+#        }
+#
+#        if (! -e $deactivated_alias_file){
+#            throw("there is not deactivated alias to activate");
+#        }
+#
+#        `mv $deactivated_alias_file $alias_file`;
+#    }
+#    
+#    return 1;
+#}
+#
+#sub _aliases_to_page {
+#    my $page_name = shift;
+#
+#    my @active_aliases = split(/\n/, `cd $conf{CNF_TEXTS_DIR}; ls *_ALIAS`);
+#    my @non_active_aliases = split(/\n/, `cd $conf{CNF_TEXTS_DIR}; ls *_ALIAS_DEACTIVATED`);
+#
+#    my @all = map( { s/_ALIAS$//; $_ } split(/\n/, `cd $conf{CNF_TEXTS_DIR}; ls *_ALIAS`) );
+#
+#    my $alias_pages =_read_file("$conf{CNF_CACHES_DIR}/alias_pages");
+#
+#    my @matching_aliases = ();
+#
+#    my @aliases = split("\n", $alias_pages);
+#
+#    for my $alias_file (@aliases) {
+#        my $target_page_name = _read_file($alias_file . "_ALIAS");
+#        chomp($target_page_name);
+#        if ($target_page_name eq $page_name) {
+#            push @matching_aliases, $alias_file;
+#        }
+#    }
+#
+#    return @matching_aliases;
+#
+#}
 
 sub get_page_HEAD_revision_number {
     my $page_name = shift;
@@ -2647,8 +2717,18 @@ sub hprint {
     $maybe_blowfish_js
     $maybe_keys_js
     $maybe_sortable_table
+        <script>
+            function do_onload () {
+                if ( document.getElementById('myel_text_area') ) {
+                    document.getElementById('myel_text_area').focus();
+                }
+                if ( document.getElementById('myel_search_query') ) {
+                    document.getElementById('myel_search_query').focus();
+                }
+            }
+        </script>
     </head>
-    <body style="margin-left:10px;" onload="if(document.getElementById('myel_text_area')){document.getElementById('myel_text_area').focus()}">
+    <body style="margin-left:10px;" onload="do_onload()">
     $start_container_div
     $branding
     <div id="myel_bodytext" ondblclick="double_click_to_edit()">$bodytext</div>

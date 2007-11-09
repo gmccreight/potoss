@@ -1,3 +1,7 @@
+version 20071109_1
+Made the search input get automatically selected in the Links
+search page.
+
 version 20070926_2
 Updated the tests to reflect the fact that the one of the creation
 pages has been removed.
