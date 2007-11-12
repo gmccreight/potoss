@@ -709,7 +709,13 @@ sub PH_page_links {
             );
 
         if ($mode eq 'rss') {
-            PH_rss($pages_str);
+            if (! $cgi->param("nm_rss_mode") ) {
+                my $url_base = qq~./?PH_page_links&nm_page=$page_name&nm_search_query=$search_query&nm_max_depth=$max_depth&nm_prune_list=$prune_list&nm_sort_by=$sort_by&nm_mode=rss~;
+                hprint( _rss_choose_options($url_base) );
+            }
+            else {
+                PH_rss($pages_str);
+            }
         }
 
         if ($mode eq 'tgz') {
@@ -1103,7 +1109,7 @@ sub show_page {
         $edit = qq~<span style="color:red;margin-right:20px;">this page is read only</span>~;
     }
 
-    my $rss_feed_icon = qq~<a href="./?PH_rss&nm_pages=$page_name" style="float:right;">
+    my $rss_feed_icon = qq~<a href="./?PH_choose_rss&nm_pages=$page_name" style="float:right;">
         <img src="./static/rss.jpg" height="12" width="12" border="0"/>
     </a>~;
 
@@ -1346,27 +1352,44 @@ sub _page_latest_revisions_diffs_html {
     
 }
 
+sub PH_choose_rss {
+
+    my $page_names = $cgi->param("nm_pages");
+    my $url_base = "./?PH_rss&nm_double_check_names=1&nm_pages=$page_names";
+
+    hprint( _rss_choose_options($url_base) );
+}
+
+sub _rss_choose_options {
+    my $url_base = shift;
+    my $body = qq~
+        <div style="margin-bottom:10px;"><em>Two different types of feeds are available:</em></div>
+        <div style="margin-bottom:10px;">
+            <a href="$url_base&nm_rss_mode=diffs_only"><img src="./static/rss.jpg" height="12" width="12" border="0"/> Differences Only</a>
+        </div>
+        <div>
+            <a href="$url_base&nm_rss_mode=full"><img src="./static/rss.jpg" height="12" width="12" border="0"/> Differences and Full Text</a>
+            <span style="margin-left:10px; color:#393;">... can function as a backup</span>
+        </div>
+    ~;
+
+    return $body;
+}
+
 sub PH_rss {
     require DateTime;
 
     my $page_names = shift;
 
-    my $MAX_NUM_REVISIONS = 20;
-    my $should_check_page_names = undef;
+    # If not called from the PH_page_links subroutine.
+    if (! $page_names) {
+        $page_names = $cgi->param("nm_pages") || throw("Needs at least one page name.");
+    }
 
-    if ($page_names) {
-        # [tag:performance]
-        # Called by the PH_page_links subroutine, which already has a
-        # list of existing pages... so no need to re-check the page names,
-        # which is slow.
-        $should_check_page_names = 0;
-    }
-    else {
-        # Called by a GET request.  Check the page names, since there may
-        # have been misspellings in the URL.
-        $page_names = $cgi->param("nm_pages");
-        $should_check_page_names = 1;
-    }
+    my $rss_mode = $cgi->param("nm_rss_mode") || 'diffs_only';
+    my $double_check_page_names = $cgi->param("nm_double_check_names") || 0;
+
+    my $MAX_NUM_REVISIONS = 20;
 
     my @pages = split(/-/, $page_names);
 
@@ -1374,7 +1397,7 @@ sub PH_rss {
     # front of the revision number for the page.
     my $show_page_prefixes = (scalar(@pages) > 1) ? 1 : 0;
 
-    if ($should_check_page_names) {
+    if ($double_check_page_names) {
         for my $page_name (@pages) {
             my $error = _check_page_name_is_ok($page_name);
             throw($error) if $error ne 'ok';
@@ -1415,7 +1438,21 @@ sub PH_rss {
                 ? "$page_name - "
                 : '';
 
-            $diff_text =~ s{\n}{<br>}g;
+            my $description_text = $diff_text;
+
+            if ( $rss_mode eq 'full' ) {
+                my $filename = get_filename_for_revision($page_name, $rev);
+                if (! -e $filename){
+                    throw("Error: the file for $page_name, $rev does not exist");
+                }
+                else {
+                    my $plain_text = _read_file($filename);
+                    $description_text .= "\n#### start of $page_name full plain text #####\n";
+                    $description_text .= $plain_text;
+                }
+            }
+
+            $description_text =~ s{\n}{<br>}g;
 
             $revision_ref->{days_old} = $days_old;
             $revision_ref->{page_name} = $page_name;
@@ -1427,7 +1464,7 @@ sub PH_rss {
                   <link>http://$conf{CNF_SITE_BASE_URL}/?PH_show_page&amp;nm_page=$page_name&amp;nm_rev=$rev</link>
                   <pubDate>$this_revision_time_str</pubDate>
                   <guid>http://$conf{CNF_SITE_BASE_URL}/?PH_show_page&amp;nm_page=$page_name&amp;nm_rev=$rev</guid>
-                  <description><![CDATA[$diff_text]]></description>
+                  <description><![CDATA[$description_text]]></description>
                 </item>
             ~;
 
@@ -1775,7 +1812,7 @@ sub PH_page_opts {
 
     $text_for_level{more} = qq~
             <div style="margin-bottom:40px;"><strong>RSS feed</strong>
-                <p style="margin-left:20px;margin-bottom:20px;"><a href="http://$conf{CNF_SITE_BASE_URL}/?PH_rss&nm_pages=$page_name">RSS feed of this page</a> (given as diffs between revisions)</p>
+                <p style="margin-left:20px;margin-bottom:20px;"><a href="./?PH_choose_rss&nm_pages=$page_name">RSS feed of this page</a></p>
             </div>
             <div style="margin-bottom:40px;"><strong>Linking</strong>
                 <p style="margin-left:20px;">$fopt_link_for{"has_linking"}</p>
@@ -1811,8 +1848,10 @@ sub PH_page_opts {
 
             <div style="margin-bottom:30px;"><strong>Multiple pages in a single RSS feed</strong>
                 <p style="margin-left:20px;">Use a minus to delimit the pages.</p>
-                <p style="margin-left:20px;">For example, for <span style="color:#448;margin-left:10px;margin-right:10px;">mom_birthday_2007</span> and <span style="color:#448;margin-left:10px;margin-right:10px;">meeting_notes_070305</span> you would say:</p>
+                <p style="margin-left:20px;">For example, for diffs only of <span style="color:#448;margin-left:10px;margin-right:10px;">mom_birthday_2007</span> and <span style="color:#448;margin-left:10px;margin-right:10px;">meeting_notes_070305</span> you would say:</p>
                 <p style="margin-left:20px;">http://$conf{CNF_SITE_BASE_URL}/?PH_rss&nm_pages=mom_birthday_2007-meeting_notes_070305</p>
+                <p style="margin-left:20px;">For example, for diffs and full text of <span style="color:#448;margin-left:10px;margin-right:10px;">mom_birthday_2007</span> and <span style="color:#448;margin-left:10px;margin-right:10px;">meeting_notes_070305</span> you would say:</p>
+                <p style="margin-left:20px;">http://$conf{CNF_SITE_BASE_URL}/?PH_rss&nm_rss_mode=full&nm_pages=mom_birthday_2007-meeting_notes_070305</p>
             </div>
             
             <div style="margin-bottom:30px;"><strong>Plain text</strong> (not delivered in an html container) to facilitate easy page scraping:

@@ -1,3 +1,7 @@
+version 20071111_1
+Made it so you can get either just the changes, or the changes
+and the full text in your RSS feeds.
+
 version 20071109_1
 Made the search input get automatically selected in the Links
 search page.
