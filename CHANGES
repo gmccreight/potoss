@@ -1,3 +1,7 @@
+version 20071111_3
+Added POT_RPC.pm and pot_add.cgi to the utils directory.  They are
+the beginnings of useful remote procedure scripts.
+
 version 20071111_2
 Small tweak to make sure that old PH_page_links RSS feeds still work.
 
