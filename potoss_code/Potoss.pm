@@ -606,7 +606,7 @@ sub PH_page_links {
         ? qq~<span style="color:red;">No matching results</span>~
         : $results_table;
 
-    my $rss_feed_icon = qq~<a href="./?PH_page_links&nm_page=$page_name&nm_search_query=$search_query&nm_max_depth=$max_depth&nm_prune_list=$prune_list&nm_sort_by=$sort_by&nm_mode=rss" style="margin-right:20px;">
+    my $rss_feed_icon = qq~<a href="./?PH_page_links&nm_page=$page_name&nm_search_query=$search_query&nm_max_depth=$max_depth&nm_prune_list=$prune_list&nm_sort_by=$sort_by&nm_mode=rss&nm_need_rss_choice=1" style="margin-right:20px;">
         rss feed <img src="./static/rss.jpg" height="12" width="12" border="0"/>
     </a>~;
 
@@ -709,7 +709,7 @@ sub PH_page_links {
             );
 
         if ($mode eq 'rss') {
-            if (! $cgi->param("nm_rss_mode") ) {
+            if ( $cgi->param("nm_need_rss_choice") ) {
                 my $url_base = qq~./?PH_page_links&nm_page=$page_name&nm_search_query=$search_query&nm_max_depth=$max_depth&nm_prune_list=$prune_list&nm_sort_by=$sort_by&nm_mode=rss~;
                 hprint( _rss_choose_options($url_base) );
             }

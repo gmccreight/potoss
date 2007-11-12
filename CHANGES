@@ -1,3 +1,6 @@
+version 20071111_2
+Small tweak to make sure that old PH_page_links RSS feeds still work.
+
 version 20071111_1
 Made it so you can get either just the changes, or the changes
 and the full text in your RSS feeds.
