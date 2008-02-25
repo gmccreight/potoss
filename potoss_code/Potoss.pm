@@ -1603,6 +1603,9 @@ sub PH_edit {
     # If they could, then they would be able to display arbitrary html
     # afterwards, and could add malicious JavaScript, iframe content, etc.
     # [tag:security] [tag:hacking] [tag:hacker]
+    # gemhack 3 - Update... actually, this may not be necessary since we escape
+    # < and > to &lt; and &gt;, but I'll leave it in until I've had a chance
+    # to think through it more and be *sure* it's not needed.
     $text =~ s/textarea/text_area/gi;
 
     $text = _maybe_add_blog_heading($text);
@@ -1611,11 +1614,18 @@ sub PH_edit {
     my $remove_branding = page_fopt($page_name, 'exists', "remove_branding");
     my $remove_container_div = page_fopt($page_name, 'exists', "remove_container_div");
 
-    my $blowfish_buttons = ($show_encryption_buttons) ? _blowfish_buttons("both") : '';
+    # [tag:privacy] - The blowfish buttons contain a form field.  Do not put
+    # them within the main form because we don't want to send the secret key
+    # to the server along with the textarea.  That would be bad.  The secret
+    # key should only ever be in the user's browser, and not available to the
+    # server.  Ever.
+    my $blowfish_buttons_do_not_put_in_form = ($show_encryption_buttons)
+        ? _blowfish_buttons("both")
+        : '';
 
     my $cancel_url = "./?PH_show_page&nm_page=$page_name&nm_rev=$revision$no_opts_uri";
 
-    my $type_of_text = (page_fopt($page_name, 'exists', "use_creole"))
+    my $message_about_type_of_text = (page_fopt($page_name, 'exists', "use_creole"))
         ? qq~<p style="color:#339" style="margin-top: 40px;">
             This page uses <em><strong>Creole</strong></em>, a standardized
             wiki markup.
@@ -1624,23 +1634,29 @@ sub PH_edit {
         : qq~<p style="color:#339">Use just plain text.  There's no fanciness here.</p>~
         ;
 
+    my $onclick_javascript_verify_encrypted = ($blowfish_buttons_do_not_put_in_form)
+        ? qq~onclick="check_textarea_encrypted();"~
+        : qq~onclick="document.getElementById('fr_edit_page').submit();"~;
+
     my $body = qq~
         $revision_alert
         $first_edit_alert
+
+        $message_about_type_of_text
+
+        $blowfish_buttons_do_not_put_in_form
+
         <form id="fr_edit_page" method="post" action="./?$page_name">
             <input type="hidden" name="PH_page_submit" value="1">
             <input type="hidden" name="nm_page" value="$page_name">
             <input type="hidden" name="nm_no_opts" value="$no_opts">
             <input type="hidden" name="nm_head_revision_number_at_edit_start" value="$head_revision_number">
 
-            $type_of_text
-
-            $blowfish_buttons
-
             <textarea id="myel_text_area" name="nm_text" cols="80" rows="22" style="font-size:12px;">$text</textarea>
             
             <div>
-                <input type="submit" name="nm_submit" value="save" class="form" style="margin-right:10px;">
+                <input type="button" name="nm_submit" value="save" class="form" $onclick_javascript_verify_encrypted style="margin-right:10px;">
+                <!--<input type="button" value="test" class="form" $onclick_javascript_verify_encrypted style="margin-right:10px;">-->
                 <input type="button" value="cancel" class="form" onclick="document.location = '$cancel_url';">
             </div>
         </form>
@@ -2595,6 +2611,18 @@ sub hprint {
 
         $maybe_blowfish_js = qq~
             <script type="text/javascript" language="javascript">
+
+                function check_textarea_encrypted () {
+                    var ps = document.getElementById('myel_text_area').value;
+                    if ( ps.match(/^[0-9A-F]+\$/) == undefined ) {
+                        confirm("The text appears to not be encrypted.  Are you sure you want to save?")
+                            && document.getElementById('fr_edit_page').submit();
+                    }
+                    else {
+                        document.getElementById('fr_edit_page').submit();
+                    }
+                }
+
                 function do_blowfish (x_sMode, x_sKey) {
 
                     if (x_sKey == 'some_key') {

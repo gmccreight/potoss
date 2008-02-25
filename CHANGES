@@ -1,3 +1,7 @@
+version 20080224_1
+Added a client-side check to make sure that pages with encryption
+buttons are actually encrypted prior to being sent to the server.
+
 version 20071111_3
 Added POT_RPC.pm and pot_add.cgi to the utils directory.  They are
 the beginnings of useful remote procedure scripts.
