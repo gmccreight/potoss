@@ -8,6 +8,7 @@ use warnings;
 #use Time::HiRes qw(tv_interval gettimeofday);
 
 require PotConf;
+require Potoss::File;
 
 no warnings;
 # Share the configuration because the .t file uses it as well.
@@ -526,7 +527,7 @@ sub PH_page_links {
                 return;
             }
             
-            my $page_data = _read_file($filename);
+            my $page_data = Potoss::File::read_file($filename);
 
             # make it case-insensitive
             my $lc_search_query = lc($search_query);
@@ -772,7 +773,7 @@ sub page_read_text_and_calculate_all_possible_links {
         return;
     }
     
-    my $page_data = _read_file($filename);
+    my $page_data = Potoss::File::read_file($filename);
 
     my %all_possible_links = ();
 
@@ -842,7 +843,7 @@ sub _links_out_cache_file_create_or_update {
 
     my @possible_links_out = page_read_text_and_calculate_all_possible_links($resolved_page_name);
     my $filename = "$conf{CNF_TEXTS_DIR}/$resolved_page_name";
-    _write_file($filename . "_CACHE_possible_links_out", join("\n", @possible_links_out));
+    Potoss::File::write_file($filename . "_CACHE_possible_links_out", join("\n", @possible_links_out));
     return 1;
 }
 
@@ -861,7 +862,7 @@ sub _links_out_cache_file_get {
     my $resolved_page_name = $resolved_alias || $page_name;
 
     my $filename = "$conf{CNF_TEXTS_DIR}/$resolved_page_name";
-    return split("\n", _read_file($filename . "_CACHE_possible_links_out"));
+    return split("\n", Potoss::File::read_file($filename . "_CACHE_possible_links_out"));
 }
 
 sub _links_out_cache_file_remove {
@@ -987,7 +988,7 @@ sub page_get_links_out_recursive {
 }
 
 sub _get_linkable_pages {
-    return split("\n", _read_file("$conf{CNF_CACHES_DIR}/linkable_pages"));
+    return split("\n", Potoss::File::read_file("$conf{CNF_CACHES_DIR}/linkable_pages"));
 }
 
 sub show_page {
@@ -1039,7 +1040,7 @@ sub show_page {
         ? $conf{CNF_DEFAULT_EMPTY_PAGE_MESSAGE}
         : qq~Nothing is in the page yet.  Click the "edit this page" link to add some text.~;
     
-    $data = _read_file($filename) || $empty_page_text;
+    $data = Potoss::File::read_file($filename) || $empty_page_text;
 
     my %opts = (
         remove_border => 1,
@@ -1159,7 +1160,7 @@ sub show_page {
 }
 
 sub _get_alias_pages {
-    return split("\n", _read_file("$conf{CNF_CACHES_DIR}/alias_pages"));
+    return split("\n", Potoss::File::read_file("$conf{CNF_CACHES_DIR}/alias_pages"));
 }
 
 sub page_does_not_exist {
@@ -1216,12 +1217,12 @@ sub _slow_down_if_more_guesses_than {
     my $guess_file = "$conf{CNF_CACHES_DIR}/guess_$ip_address_of_guess";
 
     my $num_guesses = (-e $guess_file)
-        ? _read_file($guess_file)
+        ? Potoss::File::read_file($guess_file)
         : 0;
 
     $num_guesses++;
 
-    _write_file($guess_file, $num_guesses);
+    Potoss::File::write_file($guess_file, $num_guesses);
 
     # allow for three wrong guesses before starting to affect performance.
     # gemhack 4 - will "idling" the Perl script negatively affect the web
@@ -1286,8 +1287,8 @@ sub _external_diff {
 sub _internal_diff {
     # doesn't rely on unix diff.
     my ($f1, $f2) = @_;
-    $f1 = _read_file($f1);
-    $f2 = _read_file($f2);
+    $f1 = Potoss::File::read_file($f1);
+    $f2 = Potoss::File::read_file($f2);
     require Algorithm::Diff;
     my @diffs
         = Algorithm::Diff::diff( [split(/\n/, $f1)], [split(/\n/, $f2)] );
@@ -1446,7 +1447,7 @@ sub PH_rss {
                     throw("Error: the file for $page_name, $rev does not exist");
                 }
                 else {
-                    my $plain_text = _read_file($filename);
+                    my $plain_text = Potoss::File::read_file($filename);
                     $description_text .= "\n#### start of $page_name full plain text #####\n";
                     $description_text .= $plain_text;
                 }
@@ -1544,6 +1545,15 @@ sub PH_edit {
     my $revision = $cgi->param("nm_rev");
     my $no_opts = $cgi->param('nm_no_opts') || 0;
 
+    my $textarea_rows = $cgi->param('nm_textarea_rows') || 22;
+    my $textarea_cols = $cgi->param('nm_textarea_cols') || 80;
+
+    for my $num ( $textarea_rows, $textarea_cols ) {
+        if ( ! $num =~ /^\d+$/ ) {
+            throw("either nm_textarea_rows or nm_textarea_cols is not a number");
+        }
+    }
+
     my $error = _check_page_name_is_ok($page_name);
     throw($error) if $error ne 'ok';
 
@@ -1557,7 +1567,7 @@ sub PH_edit {
     my $filename = get_filename_for_revision($page_name, $revision);
     
     if (-e $filename) {
-        $text = _read_file($filename) || "";
+        $text = Potoss::File::read_file($filename) || "";
     }
 
     my $head_revision_number = get_page_HEAD_revision_number($page_name, 'cached');
@@ -1652,7 +1662,7 @@ sub PH_edit {
             <input type="hidden" name="nm_no_opts" value="$no_opts">
             <input type="hidden" name="nm_head_revision_number_at_edit_start" value="$head_revision_number">
 
-            <textarea id="myel_text_area" name="nm_text" cols="80" rows="22" style="font-size:12px;">$text</textarea>
+            <textarea id="myel_text_area" name="nm_text" cols="$textarea_cols" rows="$textarea_rows" style="font-size:12px;">$text</textarea>
             
             <div>
                 <input type="button" name="nm_submit" value="save" class="form" $onclick_javascript_verify_encrypted style="margin-right:10px;">
@@ -1941,14 +1951,14 @@ sub _calculate_linkable_pages_cache {
     # Calculate all the page names and cache them.
     my @pages = map( { s/_FOPT_allows_incoming_links$//; $_ } split(/\n/, `cd $conf{CNF_TEXTS_DIR}; ls *_FOPT_allows_incoming_links`) );
     my $linkable_pages = join("\n", sort(@pages));
-    _write_file("$conf{CNF_CACHES_DIR}/linkable_pages", $linkable_pages);
+    Potoss::File::write_file("$conf{CNF_CACHES_DIR}/linkable_pages", $linkable_pages);
 }
 
 sub _calculate_alias_pages_cache {
     # Calculate all the page names and cache them.
     my @pages = map( { s/_ALIAS$//; $_ } split(/\n/, `cd $conf{CNF_TEXTS_DIR}; ls *_ALIAS`) );
     my $alias_pages = join("\n", sort(@pages));
-    _write_file("$conf{CNF_CACHES_DIR}/alias_pages", $alias_pages);
+    Potoss::File::write_file("$conf{CNF_CACHES_DIR}/alias_pages", $alias_pages);
 }
 
 sub page_fopt {
@@ -1957,14 +1967,23 @@ sub page_fopt {
     my $opt = shift;
     my $value = shift || '';
 
+    my %fopts = get_fopts();
+
+
+
+    #start_of_strict_tests-can_remove_for_performance
+
     if (! _is_in_set($get_create_or_remove, qw(get create remove exists)) ) {
         throw("get_create_or_remove must be [get create remove exists] not $get_create_or_remove");
     }
 
-    my %fopts = get_fopts();
     if (! _is_in_set($opt, sort keys %fopts) ) {
         throw("option $opt is not a valid page option");
     }
+
+    #end_of_strict_tests-can_remove_for_performance
+
+
 
     my $filename = "$conf{CNF_TEXTS_DIR}/${page_name}_FOPT_$opt";
 
@@ -1974,11 +1993,11 @@ sub page_fopt {
     }
     if ($get_create_or_remove eq 'get') {
         return '' if ! -e $filename;
-        my $value = _read_file($filename, $value);
+        my $value = Potoss::File::read_file($filename, $value);
         return $value;
     }
     if ($get_create_or_remove eq 'create') {
-        _write_file($filename, $value);
+        Potoss::File::write_file($filename, $value);
         return 1;
     }
     if ($get_create_or_remove eq 'remove') {
@@ -2360,7 +2379,7 @@ sub _write_new_page_revision {
     # Write the HEAD file
 
     my $filename = "$conf{CNF_TEXTS_DIR}/$page_name";
-    _write_file($filename . "_HEAD", $text);
+    Potoss::File::write_file($filename . "_HEAD", $text);
 
     # Now write the revision file to the ${page_name}_REVS folder
 
@@ -2381,14 +2400,14 @@ sub _write_new_page_revision {
     my $revs_dir = "${filename}_REVS";
     mkdir($revs_dir) if (! -d $revs_dir);
     my $rev_filename = "$revs_dir/$page_rev";
-    _write_file($rev_filename, $text);
+    Potoss::File::write_file($rev_filename, $text);
 
     # Writing stuff to a backup directory is an extra precaution
     # against data loss.
     my $backup_dir = "$conf{CNF_TEXTS_BACKUP_DIR}";
     mkdir($backup_dir) if (! -d $backup_dir);
     my $time = time(); # The time adds a bit of randomness to the end
-    _write_file("$backup_dir/${page_rev}_$time", $text);
+    Potoss::File::write_file("$backup_dir/${page_rev}_$time", $text);
     
     set_page_HEAD_revision_number_cache($page_name, $rev);
 
@@ -2428,7 +2447,7 @@ sub _is_page_alias_for {
     my $alias_file = $filename . "_ALIAS";
 
     if (-e $alias_file){
-        my $target_page_name = _read_file($alias_file);
+        my $target_page_name = Potoss::File::read_file($alias_file);
         chomp($target_page_name);
         return $target_page_name;
     }
@@ -2488,14 +2507,14 @@ sub _is_page_alias_for {
 #
 #    my @all = map( { s/_ALIAS$//; $_ } split(/\n/, `cd $conf{CNF_TEXTS_DIR}; ls *_ALIAS`) );
 #
-#    my $alias_pages =_read_file("$conf{CNF_CACHES_DIR}/alias_pages");
+#    my $alias_pages =Potoss::File::read_file("$conf{CNF_CACHES_DIR}/alias_pages");
 #
 #    my @matching_aliases = ();
 #
 #    my @aliases = split("\n", $alias_pages);
 #
 #    for my $alias_file (@aliases) {
-#        my $target_page_name = _read_file($alias_file . "_ALIAS");
+#        my $target_page_name = Potoss::File::read_file($alias_file . "_ALIAS");
 #        chomp($target_page_name);
 #        if ($target_page_name eq $page_name) {
 #            push @matching_aliases, $alias_file;
@@ -2517,7 +2536,7 @@ sub get_page_HEAD_revision_number {
     if ($real_or_cached eq 'cached') {
         my $file = "$conf{CNF_TEXTS_DIR}/${page_name}_HREV";
         if (-e $file) {
-            return _read_file("$conf{CNF_TEXTS_DIR}/${page_name}_HREV");
+            return Potoss::File::read_file("$conf{CNF_TEXTS_DIR}/${page_name}_HREV");
         }
         else {
             return -1;
@@ -2538,7 +2557,7 @@ sub get_page_HEAD_revision_number {
 sub set_page_HEAD_revision_number_cache {
     my $page_name = shift;
     my $revision = shift;
-    _write_file("$conf{CNF_TEXTS_DIR}/${page_name}_HREV", $revision);
+    Potoss::File::write_file("$conf{CNF_TEXTS_DIR}/${page_name}_HREV", $revision);
 }
 
 sub PH_redirect_test {
@@ -2820,32 +2839,6 @@ sub filter_print {
 
     print $text;
 
-}
-
-#-----------------------------------------------------------------------------
-# sect: IO
-#-----------------------------------------------------------------------------
-
-sub _read_file {
-    # [tag:easy_install] - We don't use File::Slurp to avoid prerequisites
-    my $filename = shift;
-    open(my $fh, "<", $filename)
-        || die "Cannot read from file $filename - $!";
-    my @lines = <$fh>;
-    close($fh)
-        || die "could not close $filename after reading";
-    return join("", @lines);
-}
-
-sub _write_file {
-    # [tag:easy_install] - We don't use File::Slurp to avoid prerequisites
-    my $filename = shift;
-    my $data = shift;
-    open(my $fh, ">", $filename)
-        || die "Cannot write to file $filename - $!";
-    print $fh $data;
-    close($fh)
-        || die "could not close $filename after writing";
 }
 
 #-----------------------------------------------------------------------------

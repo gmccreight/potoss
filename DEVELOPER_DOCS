@@ -1,0 +1,14 @@
+You can speed up the code by:
+
+1) removing "use strict;" and "use warnings;"
+
+2) removing the code in between the two lines:
+
+     #start_of_strict_tests-can_remove_for_performance
+     some strict testing code in here
+     tends to slow things down, but makes development more robust
+     #end_of_strict_tests-can_remove_for_performance
+
+I would suggest a pipeline where you have a master location.  Using a script
+you copy that master location to another one, then run the stripping code,
+which you write, on the new location.

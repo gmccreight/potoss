@@ -1,3 +1,8 @@
+version 20080331_1
+Moved the file read and write functionality into a separate module
+and added width and height options for the text area, which you can
+speficy in the URL: nm_textarea_cols=100&nm_textarea_rows=30
+
 version 20080224_1
 Added a client-side check to make sure that pages with encryption
 buttons are actually encrypted prior to being sent to the server.

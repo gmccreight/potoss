@@ -14,6 +14,7 @@ $ENV{POTOSS_THROW_DIES_WITH_MORE_INFO} = 1;
 use lib qw(potoss_code);
 chdir("../");
 require Potoss;
+require Potoss::File;
 
 
 #-----------------------------------------------------------------------------
@@ -299,14 +300,14 @@ diag("page name guesses");
 # Similate writing an older file so that it gets cleared by the
 # _clear_old_guess_ip_addresses subroutine.
 my $older_file = "$Potoss::conf{CNF_CACHES_DIR}/guess_12_34_56_78";
-Potoss::_write_file($older_file, '3');
+Potoss::File::write_file($older_file, '3');
 
 # Make it look two minutes old.
 my $older_time = time() - 120;
 utime($older_time, $older_time, $older_file);
 
 my $newer_file = "$Potoss::conf{CNF_CACHES_DIR}/guess_90_12_34_56";
-Potoss::_write_file($newer_file, '3');
+Potoss::File::write_file($newer_file, '3');
 
 my @guesses_cleared = Potoss::_clear_old_guess_ip_addresses();
 ok( grep( {/guess_12_34_56_78/} @guesses_cleared ),
