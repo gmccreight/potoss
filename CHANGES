@@ -1,3 +1,7 @@
+version 20080331_2
+Fixed a bug I introduced in the last version, but more importantly
+I added the ability to create related pages super quickly.
+
 version 20080331_1
 Moved the file read and write functionality into a separate module
 and added width and height options for the text area, which you can

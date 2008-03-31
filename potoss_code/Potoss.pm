@@ -229,6 +229,8 @@ sub PH_find_submit {
 
 sub PH_create {
     my $page_name = $cgi->param("nm_page") || "";
+    my $relate_to_page = $cgi->param("nm_relate_to_page") || "";
+
     my $error = shift || '';
     my $page_name_for_form = shift || $page_name;
     if ($error) {
@@ -236,10 +238,12 @@ sub PH_create {
             <div style="color:red;margin-bottom:10px;background-color:#fdd; padding:6px;">$error</div>
         ~;
     }
+
     my $body = qq~
         $error
         <form id="fr_create" method="post" action="./?">
             <input type="hidden" name="PH_create_submit" value="1">
+            <input type="hidden" name="nm_relate_to_page" value="$relate_to_page">
             
             <div style="margin-bottom:8px;">What would you like the page name to be? (may only contain a-z, 0-9, and underscores)</div>
             <div style="margin-bottom:8px;">Like: <span style="color:#448;margin-left:10px;margin-right:10px;">mom_birthday_2007</span> or <span style="color:#448;margin-left:10px;">meeting_notes_070305</span></div>
@@ -249,6 +253,26 @@ sub PH_create {
         </form>
     ~;
     hprint($body, {add_create_page_js => 1});
+}
+
+sub PH_create_from_page {
+    my $page_name = $cgi->param("nm_page");
+
+    if (! $page_name) {
+        throw("this should only be reachable from a pre-existing page, but there's no page name.");
+    }
+
+    my $body = qq~
+        <p style="margin-top:20px;">Create:</p>
+
+        <p style="margin-left:10px;"><a href="./?PH_create">A standalone page</a></p>
+        <p style="margin-left:20px;">The new page will have no relation to the one you were just on.</p>
+
+        <p style="margin-left:10px; margin-top:20px;"><a href="./?PH_create&nm_relate_to_page=$page_name">A related page</a></p>
+        <p style="margin-left:20px;">Links will be added between the new page and the one you were just on.</p>
+        <p style="margin-left:20px;"><span style="color:red;">Note:</span> If you got all fancy and already added a link pointing to the new page you are about to create, good for you!  We won't add another one.</p>
+    ~;
+    hprint($body);
 }
 
 sub throw ($) {
@@ -278,6 +302,7 @@ sub throw ($) {
 
 sub PH_create_submit {
     my $page_name = $cgi->param("nm_page");
+    my $relate_to_page = $cgi->param("nm_relate_to_page") || "";
 
     my $error = _check_page_name_is_ok($page_name);
 
@@ -304,7 +329,58 @@ sub PH_create_submit {
         return;
     }
 
-    _write_new_page_revision($page_name, '');
+    # If you want to relate the newly created page to a pre-existing page,
+    # then $relate_to_page will be a page name.  If it's not a good page
+    # name, you can throw an exception because it's an internal error or a
+    # hacker and not a user error which we should provide a soft landing for.
+    if ($relate_to_page) {
+        my $error = _check_page_name_is_ok($relate_to_page);
+        if ($error ne 'ok'){
+            throw("the page to relate to, $relate_to_page, has a bad page name");
+        }
+        if (! _page_exists($relate_to_page) ) {
+            throw("the page to relate to, $relate_to_page, does not exist");
+        }
+    }
+
+    
+
+    if ($relate_to_page) {
+        _write_new_page_revision($page_name, "back to [$relate_to_page]");
+
+        page_fopt($page_name, "create", "allows_incoming_links");
+        page_fopt($page_name, "create", "has_linking");
+
+        page_fopt($relate_to_page, "create", "allows_incoming_links");
+        page_fopt($relate_to_page, "create", "has_linking");
+
+        
+        my $related_page_filename = get_filename_for_revision($relate_to_page, "HEAD");
+        my $related_page_data = Potoss::File::read_file($related_page_filename);
+
+        my $should_add_link_to_top_of_related_page = 1;
+
+        # If the related page was an alias, then you can't add content to it.
+        if ( _is_page_alias_for($relate_to_page) ) {
+            $should_add_link_to_top_of_related_page = 0;
+        }
+
+        # If the related page already has the new page in it as a link,
+        # then don't add another link.
+        if ( $related_page_data =~ /\[$page_name\]/ ) {
+            $should_add_link_to_top_of_related_page = 0;
+        }
+
+        if ($should_add_link_to_top_of_related_page) {
+            _write_new_page_revision($relate_to_page, "link to [$page_name]\n\n" . $related_page_data);
+        }
+
+        _calculate_linkable_pages_cache();
+
+    }
+    else {
+        _write_new_page_revision($page_name, '');
+    }
 
     do_redirect("./?$page_name");
 
@@ -427,7 +503,7 @@ sub PH_plain {
         print "Error: the file does not exist";
     }
     else {
-        print _read_file($filename);
+        print Potoss::File::read_file($filename);
     }
 }
 
@@ -1124,7 +1200,7 @@ sub show_page {
     my $remove_branding = page_fopt($page_name, 'exists', "remove_branding");
     my $remove_container_div = page_fopt($page_name, 'exists', "remove_container_div");
 
-    my $create_new_link = qq~<a href="./?PH_create" style="margin-right:40px;">create a new page</a>~;
+    my $create_new_link = qq~<a href="./?PH_create_from_page&nm_page=$page_name" style="margin-right:40px;">create a new page</a>~;
     $create_new_link = '' if page_fopt($page_name, 'exists', "remove_create_new_link");
 
     my $blowfish_buttons = ($show_encryption_buttons) ? _blowfish_buttons("decrypt_only") : '';
