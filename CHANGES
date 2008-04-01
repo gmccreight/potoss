@@ -1,3 +1,6 @@
+version 20080401_2
+Very small change to make selenium write log files.
+
 version 20080401_1
 Added the Selenium tests for the functionality I added yesterday.
 

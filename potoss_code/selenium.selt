@@ -40,7 +40,7 @@ plan( tests => $NUM_TESTS_PER_BROWSER * scalar(@browsers_to_test) );
 # send STDERR to /dev/null so no 'clutter' messages appear in the console
 system qq~
     cd $SELENIUM_SERVER_DIR ;
-    java -jar selenium-server.jar 2>&1 > ./potoss_logfile.log &
+    java -jar selenium-server.jar > ./potoss_lastrun_stdout.log 2> ./potoss_lastrun_stderr.log &
 ~;
 
 #give the selenium server a chance to start up...
