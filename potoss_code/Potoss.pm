@@ -609,7 +609,9 @@ sub PH_page_links {
             my $lc_search_query = lc($search_query);
             $page_data = lc($page_data);
 
-            if ($page_data !~ m{$lc_search_query}) {
+            # either the page name or the page contents can match
+            if ( $page_data !~ m{$lc_search_query}
+                    && $page->{page_name} !~ m{$lc_search_query} ) {
                 next PAGE;
             }
 
