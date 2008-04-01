@@ -1,11 +1,13 @@
 # run this file from within Cygwin (or on a 'real' Unix) using the
-# prove command line tool.  prove is a script, and is part of
+# prove command line tool.  "prove" is a script, and is part of
 # the Test::Harness perl module.
 
 # I (Gordon) have added an alias to Cygwin to ease running this test
-# alias potoss='export POT_TEST_DIR=oss ; prove /cygdrive/i/potoss_alias/potoss_code/selenium.selt'
+# alias pd='export POT_TEST_DIR=potoss_dev ; prove /cygdrive/i/potoss_alias/potoss_code/selenium.selt'
 
 # you will also need to install the Selenium Remote Control application
+# and put its directory in the $SELENIUM_SERVER_DIR configuration variable
+# below.
 
 use strict;
 use warnings;
@@ -15,9 +17,9 @@ use warnings;
 # This is done automatically with the "plan" function call below.
 use Test::More;
 use Test::WWW::Selenium;
-use Time::HiRes qw( usleep ); #a more high resolution sleep timer
+#use Time::HiRes qw( usleep ); #a more high resolution sleep timer
 
-my $NUM_TESTS_PER_BROWSER = 143;
+my $NUM_TESTS_PER_BROWSER = 190;
 my $SELENIUM_SERVER_DIR =
     qq~"C:\\Program Files\\selenium-remote-control-0.9.1_nightly\\server"~;
 
@@ -38,9 +40,10 @@ plan( tests => $NUM_TESTS_PER_BROWSER * scalar(@browsers_to_test) );
 # send STDERR to /dev/null so no 'clutter' messages appear in the console
 system qq~
     cd $SELENIUM_SERVER_DIR ;
-    java -jar selenium-server.jar 2> /dev/null &
+    java -jar selenium-server.jar 2>&1 > ./potoss_logfile.log &
 ~;
 
+#give the selenium server a chance to start up...
 sleep 4;
 
 my $sel = undef;
@@ -65,6 +68,8 @@ my %test_for = (
 my $url = $test_for{$test_dir}->{url} || die "need url for test_dir";
 my $dir = $test_for{$test_dir}->{dir}  || die "need dir for test_dir";
 my $texts_dir = $test_for{$test_dir}->{texts} || die "need texts for test_dir";
+
+die "texts_dir $texts_dir does not exist" unless -d $texts_dir;
 
 BROWSER:
 for my $browser (@browsers_to_test) {
@@ -288,6 +293,86 @@ for my $browser (@browsers_to_test) {
     $sel->click_ok("//input[\@value='cancel']");
     my_loads_ok();
     $sel->is_text_present_ok("You are looking at revision 9");
+
+
+    #-------------------------------------------------------------------------
+    # Story:
+    # A user is on a page, clicks the "create a new page" link, then makes a
+    # linked page.  The link to [potoss_tmp_link_page_2] **DOES NOT** already
+    # exist on the first page, so it's automatically created.  See similar
+    # story below...
+
+    $sel->open_ok("${dir}potoss_tmp_link_page_1");
+    my_loads_ok();
+    $sel->is_text_present_ok("This page doesn't exist");
+    $sel->click_ok("link=create it as a new page");
+    my_loads_ok();
+    $sel->is_text_present_ok("create a new page");
+    $sel->click_ok("link=create a new page");
+    my_loads_ok();
+    $sel->is_text_present_ok("A related page");
+    $sel->click_ok("link=A related page");
+    my_loads_ok();
+    $sel->type_ok("nm_page", "potoss_tmp_link_page_2");
+    $sel->click_ok("nm_submit");
+    my_loads_ok();
+    $sel->is_text_present_ok("back to potoss_tmp_link_page_1");
+    $sel->click_ok("link=potoss_tmp_link_page_1");
+    my_loads_ok();
+    $sel->is_text_present_ok("link to potoss_tmp_link_page_2");
+    $sel->click_ok("link=potoss_tmp_link_page_2");
+    my_loads_ok();
+
+    `cd $texts_dir ; rm -r potoss_tmp_link_page_1_REVS ; rm -r potoss_tmp_link_page_2_REVS ; rm potoss_tmp_link_page_*`;
+
+    #-------------------------------------------------------------------------
+    # Story:
+    # A user is on a page, clicks the "create a new page" link, then makes a
+    # linked page.  The link to [potoss_tmp_link_page_2] **DOES** already
+    # exist on the first page, so a new one is not automatically created.
+    # See similar story above...
+
+    $sel->open_ok("${dir}potoss_tmp_link_page_1");
+    my_loads_ok();
+    $sel->is_text_present_ok("This page doesn't exist");
+    $sel->click_ok("link=create it as a new page");
+    my_loads_ok();
+
+    # unlike the story above, add the link to the text.
+    {
+        $sel->is_text_present_ok("edit this page");
+        $sel->click_ok("link=edit this page");
+        my_loads_ok();
+        $sel->is_text_present_ok("This message only appears the first time you edit a page");
+        $sel->type_ok("myel_text_area", "[potoss_tmp_link_page_2]");
+        $sel->click_ok("nm_submit");
+        my_loads_ok();
+    }
+
+    $sel->is_text_present_ok("create a new page");
+    $sel->click_ok("link=create a new page");
+    my_loads_ok();
+    $sel->is_text_present_ok("A related page");
+    $sel->click_ok("link=A related page");
+    my_loads_ok();
+    $sel->type_ok("nm_page", "potoss_tmp_link_page_2");
+    $sel->click_ok("nm_submit");
+    my_loads_ok();
+    $sel->is_text_present_ok("back to potoss_tmp_link_page_1");
+    $sel->click_ok("link=potoss_tmp_link_page_1");
+    my_loads_ok();
+
+    # unlike the story above
+    {
+        ok( ! $sel->is_text_present("link to potoss_tmp_link_page_2"),
+            "the automatically created text was not added because the link already existed");
+    }
+
+    $sel->is_text_present("potoss_tmp_link_page_2");
+    $sel->click_ok("link=potoss_tmp_link_page_2");
+    my_loads_ok();
+
+    `cd $texts_dir ; rm -r potoss_tmp_link_page_1_REVS ; rm -r potoss_tmp_link_page_2_REVS ; rm potoss_tmp_link_page_*`;
     
 
     #-------------------------------------------------------------------------

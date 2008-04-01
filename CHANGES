@@ -1,3 +1,6 @@
+version 20080401_1
+Added the Selenium tests for the functionality I added yesterday.
+
 version 20080331_2
 Fixed a bug I introduced in the last version, but more importantly
 I added the ability to create related pages super quickly.
