@@ -230,6 +230,7 @@ sub PH_find_submit {
 sub PH_create {
     my $page_name = $cgi->param("nm_page") || "";
     my $relate_to_page = $cgi->param("nm_relate_to_page") || "";
+    my $linking_is_one_way = $cgi->param("nm_linking_is_one_way") || 0;
 
     my $error = shift || '';
     my $page_name_for_form = shift || $page_name;
@@ -244,6 +245,7 @@ sub PH_create {
         <form id="fr_create" method="post" action="./?">
             <input type="hidden" name="PH_create_submit" value="1">
             <input type="hidden" name="nm_relate_to_page" value="$relate_to_page">
+            <input type="hidden" name="nm_linking_is_one_way" value="$linking_is_one_way">
             
             <div style="margin-bottom:8px;">What would you like the page name to be? (may only contain a-z, 0-9, and underscores)</div>
             <div style="margin-bottom:8px;">Like: <span style="color:#448;margin-left:10px;margin-right:10px;">mom_birthday_2007</span> or <span style="color:#448;margin-left:10px;">meeting_notes_070305</span></div>
@@ -257,20 +259,39 @@ sub PH_create {
 
 sub PH_create_from_page {
     my $page_name = $cgi->param("nm_page");
+    my $should_show_more_options = $cgi->param("nm_show_more_options") || 0;
 
     if (! $page_name) {
         throw("this should only be reachable from a pre-existing page, but there's no page name.");
     }
+
+    my $more_opts = '';
+    if ($should_show_more_options) {
+        $more_opts = qq~
+            <p style="margin-left:10px; margin-top:20px;"><a href="./?PH_create&nm_relate_to_page=$page_name">A related page - two way linking</a></p>
+            <p style="margin-left:20px;">Links will be added between the new page and the pre-existing page you were just on.</p>
+            <p style="margin-left:20px;"><span style="color:red;">Note:</span> If you got all fancy and already added a link pointing to the new page you are about to create, good for you!  We won't add another one.</p>
+
+            <p style="margin-left:10px; margin-top:20px;"><a href="./?PH_create&nm_relate_to_page=$page_name&nm_linking_is_one_way=1">A related page - one way linking only</a></p>
+            <p style="margin-left:20px;">A link will be added from the pre-existing page to the new page, but <em>not</em> from the new page back to the pre-existing page.</p>
+            <p style="margin-left:20px;"><span style="color:red;">Note:</span> If you got all fancy and already added a link pointing to the new page you are about to create, good for you!  We won't add another one.</p>
+        ~;
+    }
+    else {
+        $more_opts = qq~
+            <p style="margin-top:30px;"><a href="./?PH_create_from_page&nm_page=$page_name&nm_show_more_options=1">Show the advanced page creation options</a></p>
+        ~;
+    }
+
 
     my $body = qq~
         <p style="margin-top:20px;">Create:</p>
 
         <p style="margin-left:10px;"><a href="./?PH_create">A standalone page</a></p>
         <p style="margin-left:20px;">The new page will have no relation to the one you were just on.</p>
-
-        <p style="margin-left:10px; margin-top:20px;"><a href="./?PH_create&nm_relate_to_page=$page_name">A related page</a></p>
-        <p style="margin-left:20px;">Links will be added between the new page and the one you were just on.</p>
-        <p style="margin-left:20px;"><span style="color:red;">Note:</span> If you got all fancy and already added a link pointing to the new page you are about to create, good for you!  We won't add another one.</p>
+    
+        $more_opts
+        
     ~;
     hprint($body);
 }
@@ -303,6 +324,7 @@ sub throw ($) {
 sub PH_create_submit {
     my $page_name = $cgi->param("nm_page");
     my $relate_to_page = $cgi->param("nm_relate_to_page") || "";
+    my $linking_is_one_way = $cgi->param("nm_linking_is_one_way") || 0;
 
     my $error = _check_page_name_is_ok($page_name);
 
@@ -346,12 +368,24 @@ sub PH_create_submit {
     
 
     if ($relate_to_page) {
-        _write_new_page_revision($page_name, "back to [$relate_to_page]");
 
+        if ( $linking_is_one_way ) {
+            _write_new_page_revision($page_name, "");
+        }
+        else {
+            _write_new_page_revision($page_name, "back to [$relate_to_page]");
+        }   
+
+        # The new page
         page_fopt($page_name, "create", "allows_incoming_links");
-        page_fopt($page_name, "create", "has_linking");
+        if (! $linking_is_one_way) {
+            page_fopt($page_name, "create", "has_linking");
+        }
 
-        page_fopt($relate_to_page, "create", "allows_incoming_links");
+        # The pre-existing page
+        if (! $linking_is_one_way) {
+            page_fopt($relate_to_page, "create", "allows_incoming_links");
+        }
         page_fopt($relate_to_page, "create", "has_linking");
 
         

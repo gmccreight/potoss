@@ -19,7 +19,7 @@ use Test::More;
 use Test::WWW::Selenium;
 #use Time::HiRes qw( usleep ); #a more high resolution sleep timer
 
-my $NUM_TESTS_PER_BROWSER = 190;
+my $NUM_TESTS_PER_BROWSER = 249;
 my $SELENIUM_SERVER_DIR =
     qq~"C:\\Program Files\\selenium-remote-control-0.9.1_nightly\\server"~;
 
@@ -310,8 +310,11 @@ for my $browser (@browsers_to_test) {
     $sel->is_text_present_ok("create a new page");
     $sel->click_ok("link=create a new page");
     my_loads_ok();
-    $sel->is_text_present_ok("A related page");
-    $sel->click_ok("link=A related page");
+    $sel->is_text_present_ok("Show the advanced page creation options");
+    $sel->click_ok("link=Show the advanced page creation options");
+    my_loads_ok();
+    $sel->is_text_present_ok("A related page - two way linking");
+    $sel->click_ok("link=A related page - two way linking");
     my_loads_ok();
     $sel->type_ok("nm_page", "potoss_tmp_link_page_2");
     $sel->click_ok("nm_submit");
@@ -323,7 +326,7 @@ for my $browser (@browsers_to_test) {
     $sel->click_ok("link=potoss_tmp_link_page_2");
     my_loads_ok();
 
-    `cd $texts_dir ; rm -r potoss_tmp_link_page_1_REVS ; rm -r potoss_tmp_link_page_2_REVS ; rm potoss_tmp_link_page_*`;
+    delete_potoss_tmp_link_pages();
 
     #-------------------------------------------------------------------------
     # Story:
@@ -352,8 +355,11 @@ for my $browser (@browsers_to_test) {
     $sel->is_text_present_ok("create a new page");
     $sel->click_ok("link=create a new page");
     my_loads_ok();
-    $sel->is_text_present_ok("A related page");
-    $sel->click_ok("link=A related page");
+    $sel->is_text_present_ok("Show the advanced page creation options");
+    $sel->click_ok("link=Show the advanced page creation options");
+    my_loads_ok();
+    $sel->is_text_present_ok("A related page - two way linking");
+    $sel->click_ok("link=A related page - two way linking");
     my_loads_ok();
     $sel->type_ok("nm_page", "potoss_tmp_link_page_2");
     $sel->click_ok("nm_submit");
@@ -372,7 +378,100 @@ for my $browser (@browsers_to_test) {
     $sel->click_ok("link=potoss_tmp_link_page_2");
     my_loads_ok();
 
-    `cd $texts_dir ; rm -r potoss_tmp_link_page_1_REVS ; rm -r potoss_tmp_link_page_2_REVS ; rm potoss_tmp_link_page_*`;
+    delete_potoss_tmp_link_pages();
+
+
+    #-------------------------------------------------------------------------
+    # Story:
+    # A user is on a page, clicks the "create a new page" link, then makes a
+    # one-way linked page.  The link to [potoss_tmp_link_page_2] **DOES NOT**
+    # already exist on the first page, so it's automatically created.
+    # See similar story below...
+
+    $sel->open_ok("${dir}potoss_tmp_link_page_1");
+    my_loads_ok();
+    $sel->is_text_present_ok("This page doesn't exist");
+    $sel->click_ok("link=create it as a new page");
+    my_loads_ok();
+    $sel->is_text_present_ok("create a new page");
+    $sel->click_ok("link=create a new page");
+    my_loads_ok();
+    $sel->is_text_present_ok("Show the advanced page creation options");
+    $sel->click_ok("link=Show the advanced page creation options");
+    my_loads_ok();
+    $sel->is_text_present_ok("A related page - one way linking only");
+    $sel->click_ok("link=A related page - one way linking only");
+    my_loads_ok();
+    $sel->type_ok("nm_page", "potoss_tmp_link_page_2");
+    $sel->click_ok("nm_submit");
+    my_loads_ok();
+
+    # Note: no link back to the pre-exsiting page, since it's a one-way link.
+    $sel->is_text_present_ok("Nothing is in the page yet");
+
+    $sel->open_ok("${dir}potoss_tmp_link_page_1");
+    my_loads_ok();
+    $sel->is_text_present_ok("link to potoss_tmp_link_page_2");
+    $sel->click_ok("link=potoss_tmp_link_page_2");
+    my_loads_ok();
+
+    delete_potoss_tmp_link_pages();
+
+
+    #-------------------------------------------------------------------------
+    # Story:
+    # A user is on a page, clicks the "create a new page" link, then makes a
+    # linked page.  The link to [potoss_tmp_link_page_2] **DOES** already
+    # exist on the first page, so a new one is not automatically created.
+    # See similar story above...
+
+    $sel->open_ok("${dir}potoss_tmp_link_page_1");
+    my_loads_ok();
+    $sel->is_text_present_ok("This page doesn't exist");
+    $sel->click_ok("link=create it as a new page");
+    my_loads_ok();
+
+    # unlike the story above, add the link to the text.
+    {
+        $sel->is_text_present_ok("edit this page");
+        $sel->click_ok("link=edit this page");
+        my_loads_ok();
+        $sel->is_text_present_ok("This message only appears the first time you edit a page");
+        $sel->type_ok("myel_text_area", "[potoss_tmp_link_page_2]");
+        $sel->click_ok("nm_submit");
+        my_loads_ok();
+    }
+
+    $sel->is_text_present_ok("create a new page");
+    $sel->click_ok("link=create a new page");
+    my_loads_ok();
+    $sel->is_text_present_ok("Show the advanced page creation options");
+    $sel->click_ok("link=Show the advanced page creation options");
+    my_loads_ok();
+    $sel->is_text_present_ok("A related page - one way linking only");
+    $sel->click_ok("link=A related page - one way linking only");
+    my_loads_ok();
+    $sel->type_ok("nm_page", "potoss_tmp_link_page_2");
+    $sel->click_ok("nm_submit");
+    my_loads_ok();
+
+    # Note: no link back to the pre-exsiting page, since it's a one-way link.
+    $sel->is_text_present_ok("Nothing is in the page yet");
+
+    $sel->open_ok("${dir}potoss_tmp_link_page_1");
+    my_loads_ok();
+
+    # unlike the story above
+    {
+        ok( ! $sel->is_text_present("link to potoss_tmp_link_page_2"),
+            "the automatically created text was not added because the link already existed");
+    }
+
+    $sel->is_text_present("potoss_tmp_link_page_2");
+    $sel->click_ok("link=potoss_tmp_link_page_2");
+    my_loads_ok();
+
+    delete_potoss_tmp_link_pages();
     
 
     #-------------------------------------------------------------------------
@@ -389,6 +488,10 @@ for my $browser (@browsers_to_test) {
 # documented directly in the Test::WWW::Selenium documentation, but the
 # shutDown command is shown in the Selenium Remote Control documentation.
 $sel && $sel->do_command("shutDown");
+
+sub delete_potoss_tmp_link_pages {
+    `cd $texts_dir ; rm -r potoss_tmp_link_page_1_REVS ; rm -r potoss_tmp_link_page_2_REVS ; rm potoss_tmp_link_page_*`;
+}
 
 sub my_loads_ok {
     # this is called so often that it should be a subroutine
