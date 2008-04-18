@@ -19,7 +19,7 @@ use Test::More;
 use Test::WWW::Selenium;
 #use Time::HiRes qw( usleep ); #a more high resolution sleep timer
 
-my $NUM_TESTS_PER_BROWSER = 249;
+my $NUM_TESTS_PER_BROWSER = 274;
 my $SELENIUM_SERVER_DIR =
     qq~"C:\\Program Files\\selenium-remote-control-0.9.1_nightly\\server"~;
 
@@ -80,6 +80,42 @@ for my $browser (@browsers_to_test) {
         browser     => "*$browser->{name}",
         browser_url => "http://$url/",
     );
+
+    #-------------------------------------------------------------------------
+    # Story:
+    # A user decides to add the search box to the top of the page, then
+    # does a quick search, then decides to remove it.
+
+    $sel->open_ok("${dir}potoss_test_link_tree_a_base");
+    $sel->is_text_present_ok("potoss_test_non_existent_page");
+    
+    $sel->click_ok("link=advanced options");
+    my_loads_ok();
+    $sel->click_ok("link=more advanced");
+    my_loads_ok();
+    $sel->click_ok("link=show the search box");
+    my_loads_ok();
+    $sel->click_ok("link=go back to the page");
+    my_loads_ok();
+
+    # one of the pages which is deeply linked has "which should be" in the text.
+    $sel->type_ok("myel_search_query", "which should be");
+    $sel->click_ok("nm_submit");
+    my_loads_ok();
+
+    $sel->is_text_present_ok("potoss_test_link_tree_a_branch_a");
+    $sel->is_text_present_ok("Back to potoss_test_link_tree_a_base");
+    $sel->click_ok("link=potoss_test_link_tree_a_base");
+    my_loads_ok();
+
+    $sel->click_ok("link=advanced options");
+    my_loads_ok();
+    $sel->click_ok("link=more advanced");
+    my_loads_ok();
+    $sel->click_ok("link=hide the search box");
+    my_loads_ok();
+    $sel->click_ok("link=go back to the page");
+    my_loads_ok();
 
     #-------------------------------------------------------------------------
     # Story:
@@ -314,7 +350,7 @@ for my $browser (@browsers_to_test) {
     $sel->click_ok("link=Show the advanced page creation options");
     my_loads_ok();
     $sel->is_text_present_ok("A related page - two way linking");
-    $sel->click_ok("link=A related page - two way linking");
+    $sel->click_ok("link=don't add searchboxes");
     my_loads_ok();
     $sel->type_ok("nm_page", "potoss_tmp_link_page_2");
     $sel->click_ok("nm_submit");
@@ -359,7 +395,7 @@ for my $browser (@browsers_to_test) {
     $sel->click_ok("link=Show the advanced page creation options");
     my_loads_ok();
     $sel->is_text_present_ok("A related page - two way linking");
-    $sel->click_ok("link=A related page - two way linking");
+    $sel->click_ok("link=don't add searchboxes");
     my_loads_ok();
     $sel->type_ok("nm_page", "potoss_tmp_link_page_2");
     $sel->click_ok("nm_submit");
@@ -400,7 +436,7 @@ for my $browser (@browsers_to_test) {
     $sel->click_ok("link=Show the advanced page creation options");
     my_loads_ok();
     $sel->is_text_present_ok("A related page - one way linking only");
-    $sel->click_ok("link=A related page - one way linking only");
+    $sel->click_ok("link=don't add searchbox");
     my_loads_ok();
     $sel->type_ok("nm_page", "potoss_tmp_link_page_2");
     $sel->click_ok("nm_submit");
@@ -449,7 +485,7 @@ for my $browser (@browsers_to_test) {
     $sel->click_ok("link=Show the advanced page creation options");
     my_loads_ok();
     $sel->is_text_present_ok("A related page - one way linking only");
-    $sel->click_ok("link=A related page - one way linking only");
+    $sel->click_ok("link=don't add searchbox");
     my_loads_ok();
     $sel->type_ok("nm_page", "potoss_tmp_link_page_2");
     $sel->click_ok("nm_submit");
@@ -472,7 +508,6 @@ for my $browser (@browsers_to_test) {
     my_loads_ok();
 
     delete_potoss_tmp_link_pages();
-    
 
     #-------------------------------------------------------------------------
     # Story:

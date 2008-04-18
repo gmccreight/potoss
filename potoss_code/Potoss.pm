@@ -231,6 +231,7 @@ sub PH_create {
     my $page_name = $cgi->param("nm_page") || "";
     my $relate_to_page = $cgi->param("nm_relate_to_page") || "";
     my $linking_is_one_way = $cgi->param("nm_linking_is_one_way") || 0;
+    my $add_search_box = $cgi->param("nm_add_search_box") || "";
 
     my $error = shift || '';
     my $page_name_for_form = shift || $page_name;
@@ -246,6 +247,7 @@ sub PH_create {
             <input type="hidden" name="PH_create_submit" value="1">
             <input type="hidden" name="nm_relate_to_page" value="$relate_to_page">
             <input type="hidden" name="nm_linking_is_one_way" value="$linking_is_one_way">
+            <input type="hidden" name="nm_add_search_box" value="$add_search_box">
             
             <div style="margin-bottom:8px;">What would you like the page name to be? (may only contain a-z, 0-9, and underscores)</div>
             <div style="margin-bottom:8px;">Like: <span style="color:#448;margin-left:10px;margin-right:10px;">mom_birthday_2007</span> or <span style="color:#448;margin-left:10px;">meeting_notes_070305</span></div>
@@ -268,12 +270,20 @@ sub PH_create_from_page {
     my $more_opts = '';
     if ($should_show_more_options) {
         $more_opts = qq~
-            <p style="margin-left:10px; margin-top:20px;"><a href="./?PH_create&nm_relate_to_page=$page_name">A related page - two way linking</a></p>
+            <p style="margin-left:10px; margin-top:30px;"><span style="font-weight:bold;">A related page - two way linking:</span>
+                <a href="./?PH_create&nm_relate_to_page=$page_name&nm_add_search_box=both" style="margin-left:20px;">also add searchboxes</a>
+                <a href="./?PH_create&nm_relate_to_page=$page_name" style="margin-left:20px;">don't add searchboxes</a>
+            </p>
             <p style="margin-left:20px;">Links will be added between the new page and the pre-existing page you were just on.</p>
+            <p style="margin-left:20px;">If you choose to also add search boxes, they will be added to the top of each page, and will let you search both pages, and any other linked pages, at the same time.</p>
             <p style="margin-left:20px;"><span style="color:red;">Note:</span> If you got all fancy and already added a link pointing to the new page you are about to create, good for you!  We won't add another one.</p>
 
-            <p style="margin-left:10px; margin-top:20px;"><a href="./?PH_create&nm_relate_to_page=$page_name&nm_linking_is_one_way=1">A related page - one way linking only</a></p>
-            <p style="margin-left:20px;">A link will be added from the pre-existing page to the new page, but <em>not</em> from the new page back to the pre-existing page.</p>
+            <p style="margin-left:10px; margin-top:30px;"><span style="font-weight:bold;">A related page - one way linking only:</span>
+                <a href="./?PH_create&nm_relate_to_page=$page_name&nm_add_search_box=preexisting&nm_linking_is_one_way=1" style="margin-left:20px;">also add searchbox</a>
+                <a href="./?PH_create&nm_relate_to_page=$page_name&nm_linking_is_one_way=1" style="margin-left:20px;">don't add searchbox</a>
+            </p>
+            <p style="margin-left:20px;">A link will be added from the pre-existing page to the new page, but <strong><em>not</em></strong> from the new page back to the pre-existing page.</p>
+            <p style="margin-left:20px;">If you choose to also add the search box to the pre-existing page, it will be added to the top of the pre-existing page.</p>
             <p style="margin-left:20px;"><span style="color:red;">Note:</span> If you got all fancy and already added a link pointing to the new page you are about to create, good for you!  We won't add another one.</p>
         ~;
     }
@@ -287,8 +297,7 @@ sub PH_create_from_page {
     my $body = qq~
         <p style="margin-top:20px;">Create:</p>
 
-        <p style="margin-left:10px;"><a href="./?PH_create">A standalone page</a></p>
-        <p style="margin-left:20px;">The new page will have no relation to the one you were just on.</p>
+        <p style="margin-left:10px;"><a href="./?PH_create">A new page that is unrelated to the one you were just on</a></p>
     
         $more_opts
         
@@ -325,6 +334,7 @@ sub PH_create_submit {
     my $page_name = $cgi->param("nm_page");
     my $relate_to_page = $cgi->param("nm_relate_to_page") || "";
     my $linking_is_one_way = $cgi->param("nm_linking_is_one_way") || 0;
+    my $add_search_box = $cgi->param("nm_add_search_box") || "";
 
     my $error = _check_page_name_is_ok($page_name);
 
@@ -388,6 +398,15 @@ sub PH_create_submit {
         }
         page_fopt($relate_to_page, "create", "has_linking");
 
+
+        # Add search boxes to the top of the pages
+        if ($add_search_box eq "both") {
+            page_fopt($page_name, "create", "show_search_box");
+            page_fopt($relate_to_page, "create", "show_search_box");
+        }
+        elsif ($add_search_box eq "preexisting") {
+            page_fopt($relate_to_page, "create", "show_search_box");
+        }
         
         my $related_page_filename = get_filename_for_revision($relate_to_page, "HEAD");
         my $related_page_data = Potoss::File::read_file($related_page_filename);
@@ -568,6 +587,7 @@ sub PH_page_links {
     my $search_query = $cgi->param('nm_search_query') || '';
     my $sort_by = $cgi->param('nm_sort_by') || 'order';
     my $prune_list = $cgi->param('nm_prune_list') || '';
+    my $back_to_page = $cgi->param('nm_back_to_page') || '';
     my $mode = $cgi->param('nm_mode') || 'html';
 
         #throw($prune_list);
@@ -732,6 +752,14 @@ sub PH_page_links {
         $unprune_all_link = qq~<a href="./?PH_page_links&nm_page=$page_name&nm_search_query=$search_query&nm_max_depth=$max_depth&nm_prune_list=&nm_sort_by=$sort_by">unprune all</a>~;
     }
 
+    my $heading = '';
+    if ($back_to_page) {
+        $heading = qq~<div style="margin-top:20px; margin-bottom:20px;">Back to <a href="./?$page_name">$back_to_page</a></div>~;
+    }
+    else {
+        $heading = qq~<h4>Links for: <a href="./?$page_name">$page_name</a></h4>~;
+    }
+
     my $body = qq~
         <div id="myel_infbx_div" style="position:absolute; left:-1000px; top:0px; width:800px; background-color:#ddd; padding:6px;">&nbsp;</div>
         <script type="text/javascript">
@@ -786,7 +814,8 @@ sub PH_page_links {
             }
         </script>
             
-        <h4>Links for: <a href="./?$page_name">$page_name</a></h4>
+        $heading
+
         $maybe_search_results
 
         <form name="f" id="fr_search_links" method="post" action="./?" style="margin-bottom:20px;">
@@ -1216,7 +1245,7 @@ sub show_page {
             $no_opts_str = "&nm_no_opts=1";
         }
         $edit = qq~<a id="myel_edit_link" href="./?PH_edit&nm_page=$page_name&nm_rev=$revision$no_opts_str" style="margin-right:40px;">edit this page</a>~;
-        $advanced = qq~<a href="./?PH_page_opts&nm_page=$page_name" style="margin-right:100px;">advanced options</a>~;
+        $advanced = qq~<a href="./?PH_page_opts&nm_page=$page_name">advanced options</a>~;
     }
     else {
         $edit = qq~<span style="color:red;margin-right:20px;">this page is read only</span>~;
@@ -1243,14 +1272,31 @@ sub show_page {
 
     my $bar_color_hex = page_fopt($page_name, 'get', 'bar_color_hex') || 'eee';
 
+
+    my $search_box = "";
+    if ( page_fopt($page_name, 'exists', "show_search_box") ) {
+        $search_box = qq~
+            <form name="f" id="fr_search_links" method="post" action="./?" style="display:inline; margin-left:30px;">
+                <input type="hidden" name="PH_page_links" value="1">
+                <input type="hidden" name="nm_page" value="$page_name">
+                <input type="hidden" name="nm_back_to_page" value="$page_name">
+                <input type="hidden" name="nm_prune_list" value="">
+                <input type="hidden" name="nm_sort_by" value="">
+                <input type="text" id="myel_search_query" name="nm_search_query" value="" style="font-size:9px; width:100px; margin-right:2px;">
+                <input type="submit" name="nm_submit" value="search" class="form" style="font-size:9px;">
+            </form>
+        ~;
+    }
+
     $body = qq~
         $page_creation_message
         $rss_feed_icon
-        <p style="margin-bottom:30px;background-color:#$bar_color_hex;">
+        <div style="margin-bottom:30px;background-color:#$bar_color_hex;">
             $edit
             $create_new_link
             $advanced
-        </p>
+            $search_box
+        </div>
         $revision_alert
         $blowfish_buttons
         <p id="myel_text" style="font-family:monospace;">$encoded_data</p>
@@ -1949,10 +1995,10 @@ sub PH_page_opts {
     ~;
 
     $text_for_level{more} = qq~
-            <div style="margin-bottom:40px;"><strong>RSS feed</strong>
+            <div style="margin-bottom:30px;"><strong>RSS feed</strong>
                 <p style="margin-left:20px;margin-bottom:20px;"><a href="./?PH_choose_rss&nm_pages=$page_name">RSS feed of this page</a></p>
             </div>
-            <div style="margin-bottom:40px;"><strong>Linking</strong>
+            <div style="margin-bottom:30px;"><strong>Linking</strong>
                 <p style="margin-left:20px;">$fopt_link_for{"has_linking"}</p>
                 <p style="margin-left:20px;">$fopt_link_for{"allows_incoming_links"}</p>
             </div>
@@ -1961,11 +2007,17 @@ sub PH_page_opts {
                 <p style="margin-left:20px;">$fopt_link_for{"has_no_text_wrap"}</p>
             </div>
 
-            <div style="margin-bottom:40px;"><strong>Creole</strong>
+            <div style="margin-bottom:30px;">
+                <strong>Search Box</strong>
+                <p style="margin-left:20px;">Add a search box to the top of the page.  If you have links to other pages, you will be able to search the other pages using the search box.</p>
+                <p style="margin-left:20px;">$fopt_link_for{"show_search_box"}</p>
+            </div>
+
+            <div style="margin-bottom:30px;"><strong>Creole</strong>
                 <p style="margin-left:20px;">$fopt_link_for{"use_creole"}</p>
             </div>
 
-            <div style="margin-bottom:40px;"><strong>Notes about doing things faster</strong>
+            <div style="margin-bottom:30px;"><strong>Notes about doing things faster</strong>
                 <p style="margin-left:20px;">You can double click on the text to edit it.</p>
             </div>
 
@@ -2154,6 +2206,15 @@ return (
         no_message => "The encryption buttons are <strong>no longer</strong> shown on the page",
             no_link => "<strong>hide</strong> the encryption buttons",
             yes_link => "<strong>show</strong> the encryption buttons",
+    },
+    show_search_box => {
+        level => 'more',
+        is_boolean => 1,
+        is_color => 0,
+        yes_message => "The search box is now <strong>shown</strong> on the page",
+        no_message => "The search box is <strong>no longer</strong> shown on the page",
+            no_link => "<strong>hide</strong> the search box",
+            yes_link => "<strong>show</strong> the search box",
     },
     has_no_text_wrap => {
         level => 'more',

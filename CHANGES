@@ -1,3 +1,9 @@
+version 20080418_1
+Added the ability to have a search box at the top of your page.  It
+can be enabled via the "advanced options -> more advanced" tab.  Also,
+added some page creation options to allow for easily adding the search
+boxes as part of the page creation process.
+
 version 20080416_1
 Added the ability to create one way links easily
 
