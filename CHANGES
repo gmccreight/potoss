@@ -1,3 +1,11 @@
+version 20080424_1
+Added the page_submit parameter: nm_skip_revision_num_check.  This
+parameter allows you to force the new version, for example if you're
+writing a client for the potoss service.
+
+Also changed the version of the selenium remote control, which almost
+nobody would care about... but I thought I'd document it anyhow.
+
 version 20080418_1
 Added the ability to have a search box at the top of your page.  It
 can be enabled via the "advanced options -> more advanced" tab.  Also,

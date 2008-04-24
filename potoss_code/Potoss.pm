@@ -2423,21 +2423,24 @@ sub PH_page_submit {
     my $text = $cgi->param("nm_text");
     my $head_revision_number_at_edit_start = $cgi->param("nm_head_revision_number_at_edit_start");
     my $no_opts = $cgi->param('nm_no_opts') || 0;
+    my $skip_revision_num_check = $cgi->param('nm_skip_revision_num_check') || 0; #aka ignore or bypass
 
     my $no_opts_str = ($no_opts) ? "&nm_no_opts=1" : '';
 
-    if (get_page_HEAD_revision_number($page_name, 'cached') != $head_revision_number_at_edit_start) {
-        throw(
-            qq~<p>Someone wrote a version of the text between when you hit
-            'edit' and submitted your change.<br>
-            If we were to save your edit, we would completely wipe out their edit.</p>
-            <p>
-            You can avoid this problem by making quick edits or not having
-            too many people working on a page at the same time.</p>
-            <p><a href="./?PH_edit&nm_rev=HEAD&nm_page=$page_name$no_opts_str" style="margin-right:40px;">Redo the edit starting from the latest revision</a></p>
-            <p><a href="./?PH_show_page&nm_page=$page_name&nm_rev=HEAD$no_opts_str" style="margin-right:40px;">Go to the latest revision of the page</a></p>
-            ~
-        );
+    if (! $skip_revision_num_check ) {
+        if (get_page_HEAD_revision_number($page_name, 'cached') != $head_revision_number_at_edit_start) {
+            throw(
+                qq~<p>Someone wrote a version of the text between when you hit
+                'edit' and submitted your change.<br>
+                If we were to save your edit, we would completely wipe out their edit.</p>
+                <p>
+                You can avoid this problem by making quick edits or not having
+                too many people working on a page at the same time.</p>
+                <p><a href="./?PH_edit&nm_rev=HEAD&nm_page=$page_name$no_opts_str" style="margin-right:40px;">Redo the edit starting from the latest revision</a></p>
+                <p><a href="./?PH_show_page&nm_page=$page_name&nm_rev=HEAD$no_opts_str" style="margin-right:40px;">Go to the latest revision of the page</a></p>
+                ~
+            );
+        }
     }
 
     _write_new_page_revision($page_name, $text);
@@ -2448,8 +2451,6 @@ sub PH_page_submit {
     else {
         do_redirect("./?$page_name");
     }
-
-    #show_page($page_name);
 }
 
 sub semiRandText {

@@ -17,11 +17,13 @@ use warnings;
 # This is done automatically with the "plan" function call below.
 use Test::More;
 use Test::WWW::Selenium;
-#use Time::HiRes qw( usleep ); #a more high resolution sleep timer
 
 my $NUM_TESTS_PER_BROWSER = 274;
+#my $SELENIUM_SERVER_DIR =
+#    qq~"C:\\Program Files\\selenium-remote-control-0.9.1_nightly\\server"~;
+
 my $SELENIUM_SERVER_DIR =
-    qq~"C:\\Program Files\\selenium-remote-control-0.9.1_nightly\\server"~;
+    qq~"C:\\Program Files\\selenium-remote-control-1.0-beta-1\\server"~;
 
 my @BROWSERS = (
     { name => 'firefox',  should_test => 1 },
@@ -37,7 +39,8 @@ my @browsers_to_test = grep({$_->{should_test}} @BROWSERS);
 plan( tests => $NUM_TESTS_PER_BROWSER * scalar(@browsers_to_test) );
 
 # start up the Selenium server in java
-# send STDERR to /dev/null so no 'clutter' messages appear in the console
+# send both STDOUT and STDERR to files so no 'clutter' messages appear
+# in the console, but you're able to see what happened, if necessary.
 system qq~
     cd $SELENIUM_SERVER_DIR ;
     java -jar selenium-server.jar > ./potoss_lastrun_stdout.log 2> ./potoss_lastrun_stderr.log &
@@ -529,9 +532,13 @@ sub delete_potoss_tmp_link_pages {
 }
 
 sub my_loads_ok {
-    # this is called so often that it should be a subroutine
+    # this is called so often that I made it a subroutine
     # with a cleaner name and a variable you can change in one place.
-    $sel->wait_for_page_to_load_ok('30000', 'page loads in less than 30000');
+
+    # gemnote even with this set to a short interval, selenium still "sticks"
+    # on some pages for a _long_ time.
+    my $length_in_milliseconds = 5000;
+    $sel->wait_for_page_to_load_ok("$length_in_milliseconds", "page loads in less than $length_in_milliseconds");
 }
 
 sub my_wait_until_text_present_ok {
