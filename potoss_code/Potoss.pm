@@ -1776,8 +1776,6 @@ sub PH_edit {
     # to think through it more and be *sure* it's not needed.
     $text =~ s/textarea/text_area/gi;
 
-    $text = _maybe_add_blog_heading($text);
-
     my $show_encryption_buttons = page_fopt($page_name, 'exists', "show_encryption_buttons");
     my $remove_branding = page_fopt($page_name, 'exists', "remove_branding");
     my $remove_container_div = page_fopt($page_name, 'exists', "remove_container_div");
@@ -1831,28 +1829,6 @@ sub PH_edit {
     ~;
 
     hprint($body, {add_blowfish_js => $show_encryption_buttons, remove_branding => $remove_branding, remove_container_div => $remove_container_div});
-}
-
-sub _maybe_add_blog_heading {
-    my $text = shift;
-    my $is_blog = $cgi->param("nm_is_blog") || 0;
-    return $text if ! $is_blog;
-
-
-    #gemhack 5 - yucky yucky hack hack
-    my $datetime = `date`;
-    $datetime =~ s/(\d+):(\d+):\d+/$1:$2/;
-    my $am_pm = ($1 >= 12) ? "pm" : "am";
-    my $hour = ($1 > 12) ? $1 - 12 : $1;
-    $datetime =~ s/PDT 2007/$am_pm/;
-    $datetime =~ s/(\d+):(\d+)/$hour:$2/;
-
-    return qq~-----------------------------------------------------------------------
-$datetime
-
-$text
-~;
-
 }
 
 sub _fopts_params {
@@ -2982,8 +2958,11 @@ sub hprint {
                 if ( document.getElementById('myel_text_area') ) {
                     document.getElementById('myel_text_area').focus();
                 }
-                if ( document.getElementById('myel_search_query') ) {
+                else if ( document.getElementById('myel_search_query') ) {
                     document.getElementById('myel_search_query').focus();
+                }
+                else if ( document.getElementById('myel_page_name') ) {
+                    document.getElementById('myel_page_name').focus();
                 }
             }
         </script>

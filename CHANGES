@@ -1,3 +1,11 @@
+version 20080528_1
+Focus on the new page name field when creating a new page.
+Removed the _maybe_add_blog_heading routine, which was always meant
+to be temporary.  Using separate greasemonkey script now to generate
+date information at the top, if needed.  I can't add it as a utilty
+yet because it contains some code which had a questionable
+redistribution policy.
+
 version 20080424_1
 Added the page_submit parameter: nm_skip_revision_num_check.  This
 parameter allows you to force the new version, for example if you're
