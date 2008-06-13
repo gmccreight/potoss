@@ -1,8 +1,20 @@
+version 20080613_1
+Updated the Selenium test file to use a new format.  Each "story" is
+now in a seperate subroutine with a few definitions added as a smart
+comment of sorts.  So, for example, you can solo tests, or mark that
+tests shouldn't be run.  This is all done directly at the location of
+the story, so there's no need to fill out a seperate hash at the top
+of the test.
+This new approach is really nice because you can simply add the code
+for a new test, turn solo => 1, and it will just run that one test.
+Once that test is working well, you can turn solo off, and all the
+tests will run.
+
 version 20080528_1
 Focus on the new page name field when creating a new page.
 Removed the _maybe_add_blog_heading routine, which was always meant
 to be temporary.  Using separate greasemonkey script now to generate
-date information at the top, if needed.  I can't add it as a utilty
+date information at the top, if needed.  I can't add it as a utility
 yet because it contains some code which had a questionable
 redistribution policy.
 
