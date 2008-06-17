@@ -13,56 +13,37 @@ use strict;
 use warnings;
 use Test::More;
 use Test::WWW::Selenium;
-use File::Slurp;
 
 my $SELENIUM_SERVER_DIR =
     qq~"C:\\Program Files\\selenium-remote-control-1.0-beta-1\\server"~;
 
-my %all_tests = ();
-
 my @BROWSERS = (
-    { name => 'firefox',  should_test => 0 },
-    { name => 'iexplore', should_test => 1 },
+    { name => 'firefox',  should_test => 1 },
+    { name => 'iexplore', should_test => 0 },
     { name => 'opera', should_test => 0 }, # works, but gives a little popup error.
     #gemhack 2 would like to add safari
 );
 
-my $data = read_file($0);
-my $test_order = 0;
-for my $line ( split(/\n/, $data) ) {
-    if ( $line =~ /^\s*sub\s+(tst_[a-zA-Z_0-9]+)\s*\{\s*#\s*(.*)$/ ) {
-        my $test_name = $1;
-        my $opts = $2;
-        $all_tests{$test_name} = eval($opts);
-        $all_tests{$test_name}->{test_order} = $test_order;
-        $test_order++;
-    }
+my @all_tests = get_tests();
+
+#check that the options are correctly specified for each test
+for my $test_ref (@all_tests) {
+    die "test is lacking name" if ! exists $test_ref->{name};
+    my $test_name = $test_ref->{name};
+    die "$test_name lacking should_run option" if ! exists $test_ref->{should_run};
+    die "$test_name lacking solo option" if ! exists $test_ref->{solo};
+    die "$test_name lacking numtests option" if ! exists $test_ref->{numtests};
 }
 
-#check that all the options for each test were loaded ok
-for my $test_name (keys %all_tests) {
-    die "$test_name lacking should_run option" if ! exists $all_tests{$test_name}->{should_run};
-    die "$test_name lacking solo option" if ! exists $all_tests{$test_name}->{solo};
-    die "$test_name lacking numtests option" if ! exists $all_tests{$test_name}->{numtests};
-}
+my @solo_tests = grep({$_->{solo} == 1} @all_tests);
 
-my $there_are_solos = grep({$all_tests{$_}->{solo} == 1} keys %all_tests);
-
-my %tests_to_run = ();
-for my $key (keys %all_tests) {
-    if ($there_are_solos) {
-        if ($all_tests{$key}->{solo} == 1) {
-            $tests_to_run{$key} = $all_tests{$key};
-        }
-    }
-    elsif ($all_tests{$key}->{should_run} == 1) {
-        $tests_to_run{$key} = $all_tests{$key};
-    }
-}
+my @tests_to_run = (@solo_tests)
+    ? @solo_tests
+    : grep({$_->{should_run} == 1} @all_tests);
 
 my $NUM_TESTS_PER_BROWSER = 0;
-for my $key (keys %tests_to_run) {
-    $NUM_TESTS_PER_BROWSER += $tests_to_run{$key}->{numtests};
+for my $test_ref (@tests_to_run) {
+    $NUM_TESTS_PER_BROWSER += $test_ref->{numtests};
 }
 
 die "didn't parse this file for tests correctly" if $NUM_TESTS_PER_BROWSER == 0;
@@ -109,6 +90,10 @@ my $texts_dir = $test_for{$test_dir}->{texts} || die "need texts for test_dir";
 
 die "texts_dir $texts_dir does not exist" unless -d $texts_dir;
 
+if ( scalar(@tests_to_run) != scalar(@all_tests) ) {
+    warn "Just a note: Not running all the tests.  Either some have been solo'd or some have should_run set to zero."
+}
+
 BROWSER:
 for my $browser (@browsers_to_test) {
 
@@ -117,13 +102,14 @@ for my $browser (@browsers_to_test) {
         port        => 4444,
         browser     => "*$browser->{name}",
         browser_url => "http://$url/",
+        verbose => 0, # set to 1 to see requests as they happen
     );
 
-    for my $function_name (sort { $tests_to_run{$a}->{test_order} <=> $tests_to_run{$b}->{test_order} } keys %tests_to_run) {
-        diag("starting test: $function_name");
-        eval("$function_name();");
-        diag("ending test: $function_name");
-    } 
+    for my $test_ref (@tests_to_run) {
+        diag("starting test: $test_ref->{name}");
+        $test_ref->{code}->();
+        diag("ending test: $test_ref->{name}");
+    }
 
     #-------------------------------------------------------------------------
     CLOSE_BROWSER_TEST();
@@ -136,480 +122,542 @@ for my $browser (@browsers_to_test) {
 # shutDown command is shown in the Selenium Remote Control documentation.
 $sel && $sel->do_command("shutDown");
 
-sub tst_add_remove_search_box { # { numtests => 25, solo => 0, should_run => 1 }
-    #-------------------------------------------------------------------------
-    # Story:
-    # A user decides to add the search box to the top of the page, then
-    # does a quick search, then decides to remove it.
-    #-------------------------------------------------------------------------
+sub get_tests {
+    return (
+{
+    name => "tst_add_remove_search_box",
+    numtests => 25, solo => 0, should_run => 1,
+    code => sub {
+        #-------------------------------------------------------------------------
+        # Story:
+        # A user decides to add the search box to the top of the page, then
+        # does a quick search, then decides to remove it.
+        #-------------------------------------------------------------------------
 
-    $sel->open_ok("${dir}potoss_test_link_tree_a_base");
-    $sel->is_text_present_ok("potoss_test_non_existent_page");
-    
-    $sel->click_ok("link=advanced options");
-    my_loads_ok();
-    $sel->click_ok("link=more advanced");
-    my_loads_ok();
-    $sel->click_ok("link=show the search box");
-    my_loads_ok();
-    $sel->click_ok("link=go back to the page");
-    my_loads_ok();
+        $sel->open_ok("${dir}potoss_test_link_tree_a_base");
+        $sel->is_text_present_ok("potoss_test_non_existent_page");
+        
+        $sel->click_ok("link=advanced options");
+        my_loads_ok();
+        $sel->click_ok("link=more advanced");
+        my_loads_ok();
+        $sel->click_ok("link=show the search box");
+        my_loads_ok();
+        $sel->click_ok("link=go back to the page");
+        my_loads_ok();
 
-    # one of the pages which is deeply linked has "which should be" in the text.
-    $sel->type_ok("myel_search_query", "which should be");
-    $sel->click_ok("nm_submit");
-    my_loads_ok();
+        # one of the pages which is deeply linked has "which should be" in the text.
+        $sel->type_ok("myel_search_query", "which should be");
+        $sel->click_ok("nm_submit");
+        my_loads_ok();
 
-    $sel->is_text_present_ok("potoss_test_link_tree_a_branch_a");
-    $sel->is_text_present_ok("Back to potoss_test_link_tree_a_base");
-    $sel->click_ok("link=potoss_test_link_tree_a_base");
-    my_loads_ok();
+        $sel->is_text_present_ok("potoss_test_link_tree_a_branch_a");
+        $sel->is_text_present_ok("Back to potoss_test_link_tree_a_base");
+        $sel->click_ok("link=potoss_test_link_tree_a_base");
+        my_loads_ok();
 
-    $sel->click_ok("link=advanced options");
-    my_loads_ok();
-    $sel->click_ok("link=more advanced");
-    my_loads_ok();
-    $sel->click_ok("link=hide the search box");
-    my_loads_ok();
-    $sel->click_ok("link=go back to the page");
-    my_loads_ok();
-}
+        $sel->click_ok("link=advanced options");
+        my_loads_ok();
+        $sel->click_ok("link=more advanced");
+        my_loads_ok();
+        $sel->click_ok("link=hide the search box");
+        my_loads_ok();
+        $sel->click_ok("link=go back to the page");
+        my_loads_ok();
+    },
+},
 
-sub tst_try_to_edit_alias { # { numtests => 10, solo => 0, should_run => 1 }
-    #-------------------------------------------------------------------------
-    # Story:
-    # A user looks at an alias page, then tries to edit the page
-    #-------------------------------------------------------------------------
+{
+    name => "tst_try_to_edit_alias",
+    numtests => 10, solo => 0, should_run => 1,
+    code => sub {
+        #-------------------------------------------------------------------------
+        # Story:
+        # A user looks at an alias page, then tries to edit the page
+        #-------------------------------------------------------------------------
 
-    $sel->open_ok("${dir}potoss_wow"); #read only alias for potoss_saved_test
-    my_loads_ok();
-    $sel->is_text_present_ok("read only");
-    $sel->is_text_present_ok("this is change 11");
+        $sel->open_ok("${dir}potoss_wow"); #read only alias for potoss_saved_test
+        my_loads_ok();
+        $sel->is_text_present_ok("read only");
+        $sel->is_text_present_ok("this is change 11");
 
-    $sel->open_ok("${dir}PH_edit&nm_page=potoss_wow");
-    my_loads_ok();
-    $sel->is_text_present_ok("You can't edit this page");
+        $sel->open_ok("${dir}PH_edit&nm_page=potoss_wow");
+        my_loads_ok();
+        $sel->is_text_present_ok("You can't edit this page");
 
-    $sel->open_ok("${dir}PH_page_opts&nm_page=potoss_wow");
-    my_loads_ok();
-    $sel->is_text_present_ok("You can't view this page's options");
-}
+        $sel->open_ok("${dir}PH_page_opts&nm_page=potoss_wow");
+        my_loads_ok();
+        $sel->is_text_present_ok("You can't view this page's options");
+    },
+},
 
-sub tst_iframe_opts_remain { # { numtests => 12, solo => 0, should_run => 1 }
-    #-------------------------------------------------------------------------
-    # Story:
-    # This is POT page which has been embedded in an iframe and has nm_no_opts
-    # specified to hide the options.  Make sure that the options stay hidden
-    # as you click around.
-    #-------------------------------------------------------------------------
+{
+    name => "tst_iframe_opts_remain",
+    numtests => 12, solo => 0, should_run => 1,
+    code => sub {
+        #-------------------------------------------------------------------------
+        # Story:
+        # This is POT page which has been embedded in an iframe and has nm_no_opts
+        # specified to hide the options.  Make sure that the options stay hidden
+        # as you click around.
+        #-------------------------------------------------------------------------
 
-    $sel->open_ok("/?PH_show_page&nm_page=potoss_test_link_tree_a_base&nm_no_opts=1");
-    $sel->is_text_present_ok("potoss_test_existing_but_not_linkable_to_page");
-    ok(! $sel->is_text_present("advanced options"), "advanced options not showing");
+        $sel->open_ok("/?PH_show_page&nm_page=potoss_test_link_tree_a_base&nm_no_opts=1");
+        $sel->is_text_present_ok("potoss_test_existing_but_not_linkable_to_page");
+        ok(! $sel->is_text_present("advanced options"), "advanced options not showing");
 
-    $sel->click_ok("link=potoss_test_link_tree_a_branch_a");
-    my_loads_ok();
-    ok(! $sel->is_text_present("advanced options"), "advanced options not showing - 1");
+        $sel->click_ok("link=potoss_test_link_tree_a_branch_a");
+        my_loads_ok();
+        ok(! $sel->is_text_present("advanced options"), "advanced options not showing - 1");
 
-    $sel->click_ok("myel_edit_link");
-    my_loads_ok();
-    ok(! $sel->is_text_present("advanced options"), "advanced options not showing - 2");
+        $sel->click_ok("myel_edit_link");
+        my_loads_ok();
+        ok(! $sel->is_text_present("advanced options"), "advanced options not showing - 2");
 
-    $sel->click_ok("//input[\@value='cancel']");
-    my_loads_ok();
-    ok(! $sel->is_text_present("advanced options"), "advanced options not showing - 3");
-}
-
-
-sub tst_changes_in_already_existing_page { # { numtests => 15, solo => 0, should_run => 1 }
-    #-------------------------------------------------------------------------
-    # Story:
-    # A user looks at changes in an already existing page
-    #-------------------------------------------------------------------------
-
-    $sel->open_ok("${dir}potoss_saved_test");
-    my_loads_ok();
-    $sel->is_text_present_ok("edit this page");
-    $sel->is_text_present_ok("this is change 11");
-
-    $sel->click_ok("link=advanced options");
-    my_loads_ok();
-    $sel->click_ok("link=show the page's revision history");
-    my_loads_ok();
-    $sel->click_ok("link=compare two revisions");
-    my_loads_ok();
-    $sel->click_ok("link=start at revision 9");
-    my_loads_ok();
-    $sel->click_ok("link=end at revision 10");
-    my_loads_ok();
-    $sel->is_text_present_ok("this is change 10");
-}
+        $sel->click_ok("//input[\@value='cancel']");
+        my_loads_ok();
+        ok(! $sel->is_text_present("advanced options"), "advanced options not showing - 3");
+    },
+},
 
 
-sub tst_create_new_page { # { numtests => 24, solo => 0, should_run => 1 }
-    #-------------------------------------------------------------------------
-    # Story:
-    # A user looks for a page which doesn't exist, decides to create it and
-    # makes a couple of revisions
-    #-------------------------------------------------------------------------
+{
+    name => "tst_changes_in_already_existing_page",
+    numtests => 15, solo => 0, should_run => 1,
+    code => sub {
+        #-------------------------------------------------------------------------
+        # Story:
+        # A user looks at changes in an already existing page
+        #-------------------------------------------------------------------------
 
-    $sel->open_ok("${dir}potoss_tmp_test");
-    my_loads_ok();
-    $sel->is_text_present_ok("This page doesn't exist");
-    $sel->click_ok("link=create it as a new page");
-    my_loads_ok();
-    $sel->is_text_present_ok("edit this page");
-    $sel->click_ok("link=edit this page");
-    my_loads_ok();
-    $sel->is_text_present_ok("This message only appears the first time you edit a page");
-    $sel->type_ok("nm_text", "This is some text.");
-    $sel->click_ok("nm_submit");
-    my_loads_ok();
-    $sel->is_text_present_ok("This is some text");
-    $sel->click_ok("link=edit this page");
-    my_loads_ok();
-    $sel->type_ok("nm_text", "This is some text.\nThis is even more text.");
-    $sel->click_ok("nm_submit");
-    my_loads_ok();
-    $sel->is_text_present_ok("This is even more text");
-    $sel->click_ok("link=advanced options");
-    my_loads_ok();
-    $sel->click_ok("link=show the page's revision history");
-    my_loads_ok();
-    $sel->is_text_present_ok("view revision 2");
+        $sel->open_ok("${dir}potoss_saved_test");
+        my_loads_ok();
+        $sel->is_text_present_ok("edit this page");
+        $sel->is_text_present_ok("this is change 11");
 
-    `cd $texts_dir ; rm -r potoss_tmp_test_REVS ; rm potoss_tmp_test*`;
-}
+        $sel->click_ok("link=advanced options");
+        my_loads_ok();
+        $sel->click_ok("link=show the page's revision history");
+        my_loads_ok();
+        $sel->click_ok("link=compare two revisions");
+        my_loads_ok();
+        $sel->click_ok("link=start at revision 9");
+        my_loads_ok();
+        $sel->click_ok("link=end at revision 10");
+        my_loads_ok();
+        $sel->is_text_present_ok("this is change 10");
+    },
+},
 
 
-sub tst_only_one_revision { # { numtests => 17, solo => 0, should_run => 1 }
-    #-------------------------------------------------------------------------
-    # Story:
-    # When there is only a single revision, a message appears when you try
-    # to look at the revisions.
-    #-------------------------------------------------------------------------
+{
+    name => "tst_create_new_page",
+    numtests => 24, solo => 0, should_run => 1,
+    code => sub {
+        #-------------------------------------------------------------------------
+        # Story:
+        # A user looks for a page which doesn't exist, decides to create it and
+        # makes a couple of revisions
+        #-------------------------------------------------------------------------
 
-    $sel->open_ok("${dir}potoss_tmp_test");
-    my_loads_ok();
-    $sel->is_text_present_ok("This page doesn't exist");
-    $sel->click_ok("link=create it as a new page");
-    my_loads_ok();
-    $sel->is_text_present_ok("edit this page");
-    $sel->click_ok("link=edit this page");
-    my_loads_ok();
-    $sel->is_text_present_ok("This message only appears the first time you edit a page");
-    $sel->type_ok("myel_text_area", "This is some text.");
-    $sel->click_ok("nm_submit");
-    my_loads_ok();
-    $sel->click_ok("link=advanced options");
-    my_loads_ok();
-    $sel->click_ok("link=show the page's revision history");
-    my_loads_ok();
-    $sel->is_text_present_ok("There is currently only one revision");
-
-    `cd $texts_dir ; rm -r potoss_tmp_test_REVS ; rm potoss_tmp_test*`;
-}
-
-sub tst_create_page_name_in_dictionary { # { numtests => 6, solo => 0, should_run => 1 }
-    #-------------------------------------------------------------------------
-    # Story:
-    # Try to create a page name which is in the dictionary
-    #-------------------------------------------------------------------------
-    $sel->open_ok("${dir}PH_create");
-    $sel->is_text_present_ok("like the page name");
-    $sel->type_ok("nm_page", "queen");
-    $sel->click_ok("nm_submit");
-    my_loads_ok();
-    $sel->is_text_present_ok("is in the dictionary");
-}
-
-
-sub tst_create_page_already_exists { # { numtests => 6, solo => 0, should_run => 1 }
-    #-------------------------------------------------------------------------
-    # Story:
-    # Try to create a page which already exists
-    #-------------------------------------------------------------------------
-    $sel->open_ok("${dir}PH_create");
-    $sel->is_text_present_ok("like the page name");
-    $sel->type_ok("nm_page", "potoss_saved_test");
-    $sel->click_ok("nm_submit");
-    my_loads_ok();
-    $sel->is_text_present_ok("that one already exists");
-}
-
-
-sub tst_create_page_badly_formatted_name { # { numtests => 7, solo => 0, should_run => 1 }
-    #-------------------------------------------------------------------------
-    # Story:
-    # Try to create a page with a badly formatted name.  It will automatically
-    # suggest a better one.
-    #-------------------------------------------------------------------------
-    $sel->open_ok("${dir}PH_create");
-    $sel->is_text_present_ok("like the page name");
-    $sel->type_ok("nm_page", "My dog is always hungry!");
-    $sel->click_ok("nm_submit");
-    my_loads_ok();
-    $sel->is_text_present_ok("changed the page name to");
-    $sel->is_text_present_ok("my_dog_is_always_hungry");
-}
-
-sub tst_encrypt_decrypt_page_content { # { numtests => 30, solo => 0, should_run => 1 }
-    #-------------------------------------------------------------------------
-    # Story:
-    # A user wants to encrypt and decrypt their page content.
-    #-------------------------------------------------------------------------
-
-    $sel->open_ok("${dir}potoss_test_encryption_a");
-    $sel->is_text_present_ok("Here is some unencrypted content.");
-    $sel->is_text_present_ok("Less than < and greater than > and ampersand & and question mark ?");
-    $sel->click_ok("link=advanced options");
-    my_loads_ok();
-    $sel->click_ok("link=very advanced");
-    my_loads_ok();
-    $sel->click_ok("link=show the encryption buttons");
-    my_loads_ok();
-    $sel->click_ok("link=go back to the page");
-    my_loads_ok();
-    $sel->is_text_present_ok("Here is some unencrypted content.");
-    $sel->click_ok("myel_edit_link");
-    my_loads_ok();
-    ok($sel->get_value("myel_text_area") =~ /^Here is some unencrypted content/);
-    ok($sel->get_value("myel_text_area") =~ /Less than < and greater than > and ampersand & and question mark \?/);
-    $sel->type_ok("myel_blowfish_key", "asimplekey");
-    $sel->click_ok("link=encrypt");
-    ok($sel->get_value("myel_text_area") =~ /^4BE6B52958CAF3FA48780A3D72959F9DC87/);
-    $sel->click_ok("link=decrypt");
-    ok($sel->get_value("myel_text_area") =~ /^Here is some unencrypted content/);
-    ok($sel->get_value("myel_text_area") =~ /Less than < and greater than > and ampersand & and question mark \?/);
-    #go back to the main page
-    $sel->click_ok("//input[\@value='cancel']");
-    my_wait_until_text_present_ok("advanced options", 1);
-    $sel->click_ok("link=advanced options");
-    my_loads_ok();
-    $sel->click_ok("link=very advanced");
-    my_loads_ok();
-    $sel->click_ok("link=hide the encryption buttons");
-    my_loads_ok();
-}
-
-sub tst_edit_non_head_revision { # { numtests => 16, solo => 0, should_run => 1 }
-    #-------------------------------------------------------------------------
-    # Story:
-    # A user decides to edit starting at a non-HEAD revision.
-    # There should be alerts about this, but they should be able to get to
-    # the right place to edit, and if they cancel their edit, it should take
-    # them back to the page on the right revision.
-    #-------------------------------------------------------------------------
-
-    $sel->open_ok("/?PH_edit&nm_page=potoss_saved_test&nm_rev=9");
-    $sel->is_text_present_ok("You are not editing the latest revision");
-    $sel->click_ok("link=Edit the latest revision");
-    my_loads_ok();
-    $sel->click_ok("//input[\@value='cancel']");
-    my_loads_ok();
-    $sel->is_text_present_ok("edit this page");
-
-    $sel->click_ok("myel_edit_link");
-    my_loads_ok();
-    $sel->click_ok("//input[\@value='cancel']");
-    my_loads_ok();
-    $sel->is_text_present_ok("edit this page");
-
-    $sel->open_ok("/?PH_edit&nm_page=potoss_saved_test&nm_rev=9");
-    $sel->click_ok("//input[\@value='cancel']");
-    my_loads_ok();
-    $sel->is_text_present_ok("You are looking at revision 9");
-}
-
-sub tst_create_two_way_linked_page_link_auto_created { # { numtests => 23, solo => 0, should_run => 1 }
-    #-------------------------------------------------------------------------
-    # Story:
-    # A user is on a page, clicks the "create a new page" link, then makes a
-    # linked page.  The link to [potoss_tmp_link_page_2] **DOES NOT** already
-    # exist on the first page, so it's automatically created.  See similar
-    # story below...
-    #-------------------------------------------------------------------------
-
-    $sel->open_ok("${dir}potoss_tmp_link_page_1");
-    my_loads_ok();
-    $sel->is_text_present_ok("This page doesn't exist");
-    $sel->click_ok("link=create it as a new page");
-    my_loads_ok();
-    $sel->is_text_present_ok("create a new page");
-    $sel->click_ok("link=create a new page");
-    my_loads_ok();
-    $sel->is_text_present_ok("Show the advanced page creation options");
-    $sel->click_ok("link=Show the advanced page creation options");
-    my_loads_ok();
-    $sel->is_text_present_ok("A related page - two way linking");
-    $sel->click_ok("link=don't add searchboxes");
-    my_loads_ok();
-    $sel->type_ok("nm_page", "potoss_tmp_link_page_2");
-    $sel->click_ok("nm_submit");
-    my_loads_ok();
-    $sel->is_text_present_ok("back to potoss_tmp_link_page_1");
-    $sel->click_ok("link=potoss_tmp_link_page_1");
-    my_loads_ok();
-    $sel->is_text_present_ok("link to potoss_tmp_link_page_2");
-    $sel->click_ok("link=potoss_tmp_link_page_2");
-    my_loads_ok();
-
-    delete_potoss_tmp_link_pages();
-}
-
-sub tst_create_two_way_linked_page_link_not_auto_created { # { numtests => 31, solo => 0, should_run => 1 }
-    #-------------------------------------------------------------------------
-    # Story:
-    # A user is on a page, clicks the "create a new page" link, then makes a
-    # linked page.  The link to [potoss_tmp_link_page_2] **DOES** already
-    # exist on the first page, so a new one is not automatically created.
-    # See similar story above...
-    #-------------------------------------------------------------------------
-
-    $sel->open_ok("${dir}potoss_tmp_link_page_1");
-    my_loads_ok();
-    $sel->is_text_present_ok("This page doesn't exist");
-    $sel->click_ok("link=create it as a new page");
-    my_loads_ok();
-
-    # unlike the story above, add the link to the text.
-    {
+        $sel->open_ok("${dir}potoss_tmp_test");
+        my_loads_ok();
+        $sel->is_text_present_ok("This page doesn't exist");
+        $sel->click_ok("link=create it as a new page");
+        my_loads_ok();
         $sel->is_text_present_ok("edit this page");
         $sel->click_ok("link=edit this page");
         my_loads_ok();
         $sel->is_text_present_ok("This message only appears the first time you edit a page");
-        $sel->type_ok("myel_text_area", "[potoss_tmp_link_page_2]");
+        $sel->type_ok("nm_text", "This is some text.");
         $sel->click_ok("nm_submit");
         my_loads_ok();
-    }
+        $sel->is_text_present_ok("This is some text");
+        $sel->click_ok("link=edit this page");
+        my_loads_ok();
+        $sel->type_ok("nm_text", "This is some text.\nThis is even more text.");
+        $sel->click_ok("nm_submit");
+        my_loads_ok();
+        $sel->is_text_present_ok("This is even more text");
+        $sel->click_ok("link=advanced options");
+        my_loads_ok();
+        $sel->click_ok("link=show the page's revision history");
+        my_loads_ok();
+        $sel->is_text_present_ok("view revision 2");
 
-    #12
+        `cd $texts_dir ; rm -r potoss_tmp_test_REVS ; rm potoss_tmp_test*`;
+    },
+},
 
-    $sel->is_text_present_ok("create a new page");
-    $sel->click_ok("link=create a new page");
-    my_loads_ok();
-    $sel->is_text_present_ok("Show the advanced page creation options");
-    $sel->click_ok("link=Show the advanced page creation options");
-    my_loads_ok();
-    $sel->is_text_present_ok("A related page - two way linking");
-    $sel->click_ok("link=don't add searchboxes");
-    my_loads_ok();
-    $sel->type_ok("nm_page", "potoss_tmp_link_page_2");
-    $sel->click_ok("nm_submit");
-    my_loads_ok();
-    $sel->is_text_present_ok("back to potoss_tmp_link_page_1");
-    $sel->click_ok("link=potoss_tmp_link_page_1");
-    my_loads_ok();
 
-    # unlike the story above
-    {
-        ok( ! $sel->is_text_present("link to potoss_tmp_link_page_2"),
-            "the automatically created text was not added because the link already existed");
-    }
+{
+    name => "tst_only_one_revision",
+    numtests => 17, solo => 0, should_run => 1,
+    code => sub {
+        #-------------------------------------------------------------------------
+        # Story:
+        # When there is only a single revision, a message appears when you try
+        # to look at the revisions.
+        #-------------------------------------------------------------------------
 
-    $sel->is_text_present_ok("potoss_tmp_link_page_2");
-    $sel->click_ok("link=potoss_tmp_link_page_2");
-    my_loads_ok();
-
-    delete_potoss_tmp_link_pages();
-}
-
-sub tst_create_one_way_linked_page_link_auto_created { # { numtests => 23, solo => 0, should_run => 1 }
-    #-------------------------------------------------------------------------
-    # Story:
-    # A user is on a page, clicks the "create a new page" link, then makes a
-    # one-way linked page.  The link to [potoss_tmp_link_page_2] **DOES NOT**
-    # already exist on the first page, so it's automatically created.
-    # See similar story below...
-    #-------------------------------------------------------------------------
-
-    $sel->open_ok("${dir}potoss_tmp_link_page_1");
-    my_loads_ok();
-    $sel->is_text_present_ok("This page doesn't exist");
-    $sel->click_ok("link=create it as a new page");
-    my_loads_ok();
-    $sel->is_text_present_ok("create a new page");
-    $sel->click_ok("link=create a new page");
-    my_loads_ok();
-    $sel->is_text_present_ok("Show the advanced page creation options");
-    $sel->click_ok("link=Show the advanced page creation options");
-    my_loads_ok();
-    $sel->is_text_present_ok("A related page - one way linking only");
-    $sel->click_ok("link=don't add searchbox");
-    my_loads_ok();
-    $sel->type_ok("nm_page", "potoss_tmp_link_page_2");
-    $sel->click_ok("nm_submit");
-    my_loads_ok();
-
-    # Note: no link back to the pre-exsiting page, since it's a one-way link.
-    $sel->is_text_present_ok("Nothing is in the page yet");
-
-    $sel->open_ok("${dir}potoss_tmp_link_page_1");
-    my_loads_ok();
-    $sel->is_text_present_ok("link to potoss_tmp_link_page_2");
-    $sel->click_ok("link=potoss_tmp_link_page_2");
-    my_loads_ok();
-
-    delete_potoss_tmp_link_pages();
-}
-
-sub tst_create_one_way_linked_page_link_not_auto_created { # { numtests => 31, solo => 0, should_run => 1 }
-    #-------------------------------------------------------------------------
-    # Story:
-    # A user is on a page, clicks the "create a new page" link, then makes a
-    # linked page.  The link to [potoss_tmp_link_page_2] **DOES** already
-    # exist on the first page, so a new one is not automatically created.
-    # See similar story above...
-    #-------------------------------------------------------------------------
-
-    $sel->open_ok("${dir}potoss_tmp_link_page_1");
-    my_loads_ok();
-    $sel->is_text_present_ok("This page doesn't exist");
-    $sel->click_ok("link=create it as a new page");
-    my_loads_ok();
-
-    # unlike the story above, add the link to the text.
-    {
+        $sel->open_ok("${dir}potoss_tmp_test");
+        my_loads_ok();
+        $sel->is_text_present_ok("This page doesn't exist");
+        $sel->click_ok("link=create it as a new page");
+        my_loads_ok();
         $sel->is_text_present_ok("edit this page");
         $sel->click_ok("link=edit this page");
         my_loads_ok();
         $sel->is_text_present_ok("This message only appears the first time you edit a page");
-        $sel->type_ok("myel_text_area", "[potoss_tmp_link_page_2]");
+        $sel->type_ok("myel_text_area", "This is some text.");
         $sel->click_ok("nm_submit");
         my_loads_ok();
-    }
+        $sel->click_ok("link=advanced options");
+        my_loads_ok();
+        $sel->click_ok("link=show the page's revision history");
+        my_loads_ok();
+        $sel->is_text_present_ok("There is currently only one revision");
 
-    $sel->is_text_present_ok("create a new page");
-    $sel->click_ok("link=create a new page");
-    my_loads_ok();
-    $sel->is_text_present_ok("Show the advanced page creation options");
-    $sel->click_ok("link=Show the advanced page creation options");
-    my_loads_ok();
-    $sel->is_text_present_ok("A related page - one way linking only");
-    $sel->click_ok("link=don't add searchbox");
-    my_loads_ok();
-    $sel->type_ok("nm_page", "potoss_tmp_link_page_2");
-    $sel->click_ok("nm_submit");
-    my_loads_ok();
+        `cd $texts_dir ; rm -r potoss_tmp_test_REVS ; rm potoss_tmp_test*`;
+    },
+},
 
-    # Note: no link back to the pre-exsiting page, since it's a one-way link.
-    $sel->is_text_present_ok("Nothing is in the page yet");
+{
+    name => "tst_create_page_name_in_dictionary",
+    numtests => 6, solo => 0, should_run => 1,
+    code => sub {
+        #-------------------------------------------------------------------------
+        # Story:
+        # Try to create a page name which is in the dictionary
+        #-------------------------------------------------------------------------
+        $sel->open_ok("${dir}PH_create");
+        $sel->is_text_present_ok("like the page name");
+        $sel->type_ok("nm_page", "queen");
+        $sel->click_ok("nm_submit");
+        my_loads_ok();
+        $sel->is_text_present_ok("is in the dictionary");
+    },
+},
 
-    $sel->open_ok("${dir}potoss_tmp_link_page_1");
-    my_loads_ok();
 
-    # unlike the story above
-    {
-        ok( ! $sel->is_text_present("link to potoss_tmp_link_page_2"),
-            "the automatically created text was not added because the link already existed");
-    }
+{
+    name => "tst_create_page_already_exists",
+    numtests => 6, solo => 0, should_run => 1,
+    code => sub {
+        #-------------------------------------------------------------------------
+        # Story:
+        # Try to create a page which already exists
+        #-------------------------------------------------------------------------
+        $sel->open_ok("${dir}PH_create");
+        $sel->is_text_present_ok("like the page name");
+        $sel->type_ok("nm_page", "potoss_saved_test");
+        $sel->click_ok("nm_submit");
+        my_loads_ok();
+        $sel->is_text_present_ok("that one already exists");
+    },
+},
 
-    $sel->is_text_present_ok("potoss_tmp_link_page_2");
-    $sel->click_ok("link=potoss_tmp_link_page_2");
-    my_loads_ok();
 
-    delete_potoss_tmp_link_pages();
-}
+{
+    name => "tst_create_page_badly_formatted_name",
+    numtests => 7, solo => 0, should_run => 1,
+    code => sub {
+        #-------------------------------------------------------------------------
+        # Story:
+        # Try to create a page with a badly formatted name.  It will automatically
+        # suggest a better one.
+        #-------------------------------------------------------------------------
+        $sel->open_ok("${dir}PH_create");
+        $sel->is_text_present_ok("like the page name");
+        $sel->type_ok("nm_page", "My dog is always hungry!");
+        $sel->click_ok("nm_submit");
+        my_loads_ok();
+        $sel->is_text_present_ok("changed the page name to");
+        $sel->is_text_present_ok("my_dog_is_always_hungry");
+    },
+},
+
+{
+    name => "tst_encrypt_decrypt_page_content",
+    numtests => 30, solo => 0, should_run => 1,
+    code => sub {
+        #-------------------------------------------------------------------------
+        # Story:
+        # A user wants to encrypt and decrypt their page content.
+        #-------------------------------------------------------------------------
+
+        $sel->open_ok("${dir}potoss_test_encryption_a");
+        $sel->is_text_present_ok("Here is some unencrypted content.");
+        $sel->is_text_present_ok("Less than < and greater than > and ampersand & and question mark ?");
+        $sel->click_ok("link=advanced options");
+        my_loads_ok();
+        $sel->click_ok("link=very advanced");
+        my_loads_ok();
+        $sel->click_ok("link=show the encryption buttons");
+        my_loads_ok();
+        $sel->click_ok("link=go back to the page");
+        my_loads_ok();
+        $sel->is_text_present_ok("Here is some unencrypted content.");
+        $sel->click_ok("myel_edit_link");
+        my_loads_ok();
+        ok($sel->get_value("myel_text_area") =~ /^Here is some unencrypted content/);
+        ok($sel->get_value("myel_text_area") =~ /Less than < and greater than > and ampersand & and question mark \?/);
+        $sel->type_ok("myel_blowfish_key", "asimplekey");
+        $sel->click_ok("link=encrypt");
+        ok($sel->get_value("myel_text_area") =~ /^4BE6B52958CAF3FA48780A3D72959F9DC87/);
+        $sel->click_ok("link=decrypt");
+        ok($sel->get_value("myel_text_area") =~ /^Here is some unencrypted content/);
+        ok($sel->get_value("myel_text_area") =~ /Less than < and greater than > and ampersand & and question mark \?/);
+        #go back to the main page
+        $sel->click_ok("//input[\@value='cancel']");
+        my_wait_until_text_present_ok("advanced options", 1);
+        $sel->click_ok("link=advanced options");
+        my_loads_ok();
+        $sel->click_ok("link=very advanced");
+        my_loads_ok();
+        $sel->click_ok("link=hide the encryption buttons");
+        my_loads_ok();
+    },
+},
+
+{
+    name => "tst_edit_non_head_revision",
+    numtests => 16, solo => 0, should_run => 1,
+    code => sub {
+        #-------------------------------------------------------------------------
+        # Story:
+        # A user decides to edit starting at a non-HEAD revision.
+        # There should be alerts about this, but they should be able to get to
+        # the right place to edit, and if they cancel their edit, it should take
+        # them back to the page on the right revision.
+        #-------------------------------------------------------------------------
+
+        $sel->open_ok("/?PH_edit&nm_page=potoss_saved_test&nm_rev=9");
+        $sel->is_text_present_ok("You are not editing the latest revision");
+        $sel->click_ok("link=Edit the latest revision");
+        my_loads_ok();
+        $sel->click_ok("//input[\@value='cancel']");
+        my_loads_ok();
+        $sel->is_text_present_ok("edit this page");
+
+        $sel->click_ok("myel_edit_link");
+        my_loads_ok();
+        $sel->click_ok("//input[\@value='cancel']");
+        my_loads_ok();
+        $sel->is_text_present_ok("edit this page");
+
+        $sel->open_ok("/?PH_edit&nm_page=potoss_saved_test&nm_rev=9");
+        $sel->click_ok("//input[\@value='cancel']");
+        my_loads_ok();
+        $sel->is_text_present_ok("You are looking at revision 9");
+    },
+},
+
+{
+    name => "tst_create_two_way_linked_page_link_auto_created",
+    numtests => 23, solo => 0, should_run => 1,
+    code => sub {
+        #-------------------------------------------------------------------------
+        # Story:
+        # A user is on a page, clicks the "create a new page" link, then makes a
+        # linked page.  The link to [potoss_tmp_link_page_2] **DOES NOT** already
+        # exist on the first page, so it's automatically created.  See similar
+        # story below...
+        #-------------------------------------------------------------------------
+
+        $sel->open_ok("${dir}potoss_tmp_link_page_1");
+        my_loads_ok();
+        $sel->is_text_present_ok("This page doesn't exist");
+        $sel->click_ok("link=create it as a new page");
+        my_loads_ok();
+        $sel->is_text_present_ok("create a new page");
+        $sel->click_ok("link=create a new page");
+        my_loads_ok();
+        $sel->is_text_present_ok("Show the advanced page creation options");
+        $sel->click_ok("link=Show the advanced page creation options");
+        my_loads_ok();
+        $sel->is_text_present_ok("A related page - two way linking");
+        $sel->click_ok("link=don't add searchboxes");
+        my_loads_ok();
+        $sel->type_ok("nm_page", "potoss_tmp_link_page_2");
+        $sel->click_ok("nm_submit");
+        my_loads_ok();
+        $sel->is_text_present_ok("back to potoss_tmp_link_page_1");
+        $sel->click_ok("link=potoss_tmp_link_page_1");
+        my_loads_ok();
+        $sel->is_text_present_ok("link to potoss_tmp_link_page_2");
+        $sel->click_ok("link=potoss_tmp_link_page_2");
+        my_loads_ok();
+
+        delete_potoss_tmp_link_pages();
+    },
+},
+
+{
+    name => "tst_create_two_way_linked_page_link_not_auto_created",
+    numtests => 31, solo => 0, should_run => 1,
+    code => sub {
+        #-------------------------------------------------------------------------
+        # Story:
+        # A user is on a page, clicks the "create a new page" link, then makes a
+        # linked page.  The link to [potoss_tmp_link_page_2] **DOES** already
+        # exist on the first page, so a new one is not automatically created.
+        # See similar story above...
+        #-------------------------------------------------------------------------
+
+        $sel->open_ok("${dir}potoss_tmp_link_page_1");
+        my_loads_ok();
+        $sel->is_text_present_ok("This page doesn't exist");
+        $sel->click_ok("link=create it as a new page");
+        my_loads_ok();
+
+        # unlike the story above, add the link to the text.
+        {
+            $sel->is_text_present_ok("edit this page");
+            $sel->click_ok("link=edit this page");
+            my_loads_ok();
+            $sel->is_text_present_ok("This message only appears the first time you edit a page");
+            $sel->type_ok("myel_text_area", "[potoss_tmp_link_page_2]");
+            $sel->click_ok("nm_submit");
+            my_loads_ok();
+        }
+
+        $sel->is_text_present_ok("create a new page");
+        $sel->click_ok("link=create a new page");
+        my_loads_ok();
+        $sel->is_text_present_ok("Show the advanced page creation options");
+        $sel->click_ok("link=Show the advanced page creation options");
+        my_loads_ok();
+        $sel->is_text_present_ok("A related page - two way linking");
+        $sel->click_ok("link=don't add searchboxes");
+        my_loads_ok();
+        $sel->type_ok("nm_page", "potoss_tmp_link_page_2");
+        $sel->click_ok("nm_submit");
+        my_loads_ok();
+        $sel->is_text_present_ok("back to potoss_tmp_link_page_1");
+        $sel->click_ok("link=potoss_tmp_link_page_1");
+        my_loads_ok();
+
+        # unlike the story above
+        {
+            ok( ! $sel->is_text_present("link to potoss_tmp_link_page_2"),
+                "the automatically created text was not added because the link already existed");
+        }
+
+        $sel->is_text_present_ok("potoss_tmp_link_page_2");
+        $sel->click_ok("link=potoss_tmp_link_page_2");
+        my_loads_ok();
+
+        delete_potoss_tmp_link_pages();
+    },
+},
+
+{
+    name => "tst_create_one_way_linked_page_link_auto_created",
+    numtests => 23, solo => 0, should_run => 1,
+    code => sub {
+        #-------------------------------------------------------------------------
+        # Story:
+        # A user is on a page, clicks the "create a new page" link, then makes a
+        # one-way linked page.  The link to [potoss_tmp_link_page_2] **DOES NOT**
+        # already exist on the first page, so it's automatically created.
+        # See similar story below...
+        #-------------------------------------------------------------------------
+
+        $sel->open_ok("${dir}potoss_tmp_link_page_1");
+        my_loads_ok();
+        $sel->is_text_present_ok("This page doesn't exist");
+        $sel->click_ok("link=create it as a new page");
+        my_loads_ok();
+        $sel->is_text_present_ok("create a new page");
+        $sel->click_ok("link=create a new page");
+        my_loads_ok();
+        $sel->is_text_present_ok("Show the advanced page creation options");
+        $sel->click_ok("link=Show the advanced page creation options");
+        my_loads_ok();
+        $sel->is_text_present_ok("A related page - one way linking only");
+        $sel->click_ok("link=don't add searchbox");
+        my_loads_ok();
+        $sel->type_ok("nm_page", "potoss_tmp_link_page_2");
+        $sel->click_ok("nm_submit");
+        my_loads_ok();
+
+        # Note: no link back to the pre-exsiting page, since it's a one-way link.
+        $sel->is_text_present_ok("Nothing is in the page yet");
+
+        $sel->open_ok("${dir}potoss_tmp_link_page_1");
+        my_loads_ok();
+        $sel->is_text_present_ok("link to potoss_tmp_link_page_2");
+        $sel->click_ok("link=potoss_tmp_link_page_2");
+        my_loads_ok();
+
+        delete_potoss_tmp_link_pages();
+    },
+},
+
+{
+    name => "tst_create_one_way_linked_page_link_not_auto_created",
+    numtests => 31, solo => 0, should_run => 1,
+    code => sub {
+        #-------------------------------------------------------------------------
+        # Story:
+        # A user is on a page, clicks the "create a new page" link, then makes a
+        # linked page.  The link to [potoss_tmp_link_page_2] **DOES** already
+        # exist on the first page, so a new one is not automatically created.
+        # See similar story above...
+        #-------------------------------------------------------------------------
+
+        $sel->open_ok("${dir}potoss_tmp_link_page_1");
+        my_loads_ok();
+        $sel->is_text_present_ok("This page doesn't exist");
+        $sel->click_ok("link=create it as a new page");
+        my_loads_ok();
+
+        # unlike the story above, add the link to the text.
+        {
+            $sel->is_text_present_ok("edit this page");
+            $sel->click_ok("link=edit this page");
+            my_loads_ok();
+            $sel->is_text_present_ok("This message only appears the first time you edit a page");
+            $sel->type_ok("myel_text_area", "[potoss_tmp_link_page_2]");
+            $sel->click_ok("nm_submit");
+            my_loads_ok();
+        }
+
+        $sel->is_text_present_ok("create a new page");
+        $sel->click_ok("link=create a new page");
+        my_loads_ok();
+        $sel->is_text_present_ok("Show the advanced page creation options");
+        $sel->click_ok("link=Show the advanced page creation options");
+        my_loads_ok();
+        $sel->is_text_present_ok("A related page - one way linking only");
+        $sel->click_ok("link=don't add searchbox");
+        my_loads_ok();
+        $sel->type_ok("nm_page", "potoss_tmp_link_page_2");
+        $sel->click_ok("nm_submit");
+        my_loads_ok();
+
+        # Note: no link back to the pre-exsiting page, since it's a one-way link.
+        $sel->is_text_present_ok("Nothing is in the page yet");
+
+        $sel->open_ok("${dir}potoss_tmp_link_page_1");
+        my_loads_ok();
+
+        # unlike the story above
+        {
+            ok( ! $sel->is_text_present("link to potoss_tmp_link_page_2"),
+                "the automatically created text was not added because the link already existed");
+        }
+
+        $sel->is_text_present_ok("potoss_tmp_link_page_2");
+        $sel->click_ok("link=potoss_tmp_link_page_2");
+        my_loads_ok();
+
+        delete_potoss_tmp_link_pages();
+    },
+},
+)  #end of tests array
+}  #end of get_tests subroutine
 
 sub CLOSE_BROWSER_TEST {
 
