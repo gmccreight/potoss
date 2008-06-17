@@ -1,3 +1,7 @@
+version 20080617_1
+Changed the Selenium test file again.  Now uses an array of hash
+references for the tests.
+
 version 20080613_1
 Updated the Selenium test file to use a new format.  Each "story" is
 now in a seperate subroutine with a few definitions added as a smart
