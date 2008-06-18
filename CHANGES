@@ -1,3 +1,8 @@
+version 20080618_1
+Updated the path to the Selenium Remote Control server so that it
+would run the version that controls Firefox 3.  Firefox 3 passes
+all tests.
+
 version 20080617_1
 Changed the Selenium test file again.  Now uses an array of hash
 references for the tests.

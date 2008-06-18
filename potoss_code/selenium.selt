@@ -14,8 +14,9 @@ use warnings;
 use Test::More;
 use Test::WWW::Selenium;
 
+# Needs to be newer than the Version 1.0 beta 1 to test Firefox 3.
 my $SELENIUM_SERVER_DIR =
-    qq~"C:\\Program Files\\selenium-remote-control-1.0-beta-1\\server"~;
+    qq~"C:\\Program Files\\selenium-remote-control-1.0-nightly\\server"~;
 
 my @BROWSERS = (
     { name => 'firefox',  should_test => 1 },
