@@ -1,3 +1,12 @@
+version 20080619_1
+Luke Closs pointed me to universaleditbutton.org, which is a compelling idea.
+Added application/wiki links in the <head>, but then realized that I'd never
+gotten around to adding application/rss+xml links to <head>, so did that too.
+Also decided to update my in-code tags to my standard [tag:some_tag:gem]
+format.
+Also added the is_last_test option to each test, to be able to short
+circuit the tests if you really only need to run a section of them.
+
 version 20080618_1
 Updated the path to the Selenium Remote Control server so that it
 would run the version that controls Firefox 3.  Firefox 3 passes

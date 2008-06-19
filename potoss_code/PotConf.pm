@@ -4,10 +4,10 @@ use strict;
 use warnings;
 
 # gemhack 4 - We use a patched version of Text::Wrap, which is in the
-# following directory: [tag:patched]
+# following directory: [tag:patched:gem]
 use lib qw( ./potoss_code/patched_libs );
 
-# [tag:easy_install]
+# [tag:easy_install:gem]
 # Don't make the person install all the needed modules.  Give them default
 # ones which work OK.
 # Push this directory onto the end, so it's the last one that is checked.

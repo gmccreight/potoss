@@ -187,7 +187,7 @@ sub PH_find {
 
 sub PH_find_submit {
 
-    my $was_slowed_down = _slow_down_if_more_guesses_than(5); #[tag:security] [tag:privacy]
+    my $was_slowed_down = _slow_down_if_more_guesses_than(5); #[tag:security:gem] [tag:privacy:gem]
 
     my @words = ();
 
@@ -569,7 +569,7 @@ sub _encode_entities {
 sub _wrap_text {
     my $text = shift;
 
-    # gemhack 5 - This is a patched version [tag:patched]
+    # gemhack 5 - This is a patched version [tag:patched:gem]
     require Text::Wrap;
     no warnings;
     $Text::Wrap::columns = 80;
@@ -1204,7 +1204,7 @@ sub show_page {
     elsif (! page_fopt($resolved_page_name, 'exists', "has_no_text_wrap")) {
         # gemhack 5 - The Text::Wrap module was patched by Gordon to remove
         # the unexpanding of tabs because it was buggy and we don't use tabs
-        # in our textareas. [tag:patched]
+        # in our textareas. [tag:patched:gem]
         
         $data = join('', _wrap_text($data));
         
@@ -1239,12 +1239,11 @@ sub show_page {
     my $edit = '';
     my $advanced = '';
 
+    my $no_opts_str = ($no_opts) ? "&nm_no_opts=1" : '';
+    my $edit_url = "./?PH_edit&nm_page=$page_name&nm_rev=$revision$no_opts_str";
+
     if (! $resolved_alias) {
-        my $no_opts_str = '';
-        if ($no_opts) {
-            $no_opts_str = "&nm_no_opts=1";
-        }
-        $edit = qq~<a id="myel_edit_link" href="./?PH_edit&nm_page=$page_name&nm_rev=$revision$no_opts_str" style="margin-right:40px;">edit this page</a>~;
+        $edit = qq~<a id="myel_edit_link" href="$edit_url" style="margin-right:40px;">edit this page</a>~;
         $advanced = qq~<a href="./?PH_page_opts&nm_page=$page_name">advanced options</a>~;
     }
     else {
@@ -1305,13 +1304,15 @@ sub show_page {
 
     hprint(
         $body,
-        {   remove_border        => $opts{remove_border},
-            remove_branding      => $remove_branding,
-            remove_container_div => $remove_container_div,
-            page_name            => $page_name,
-            add_keys_js          => 1,
-            add_blowfish_js      => $show_encryption_buttons,
-            add_sortable_table_js => $add_sortable_table_js,
+        {   remove_border             => $opts{remove_border},
+            remove_branding           => $remove_branding,
+            remove_container_div      => $remove_container_div,
+            page_name                 => $page_name,
+            add_keys_js               => 1,
+            add_blowfish_js           => $show_encryption_buttons,
+            add_sortable_table_js     => $add_sortable_table_js,
+            universal_edit_button_url => $edit_url,
+            add_rss_to_head           => 1,
         }
     );
 
@@ -1324,7 +1325,7 @@ sub _get_alias_pages {
 sub page_does_not_exist {
     my $page_name = shift;
 
-    _slow_down_if_more_guesses_than(3); # [tag:security] [tag:privacy]
+    _slow_down_if_more_guesses_than(3); # [tag:security:gem] [tag:privacy:gem]
 
     my $body = qq~
         <p style="color:red;">This page doesn't exist.</p>
@@ -1362,7 +1363,7 @@ sub _slow_down_if_more_guesses_than {
     # Subtly slow down the response if there are too many guesses from the
     # same IP address.  This is to try to avoid any kind of a brute force
     # attack from a single IP address.
-    # [tag:security] [tag:hacking] [tag:hacker]
+    # [tag:security:gem] [tag:hacking:gem] [tag:hacker:gem]
 
     my $slow_after_how_many_guesses = shift;
 
@@ -1770,7 +1771,7 @@ sub PH_edit {
     # gemhack 1 - Don't let the hackers close the textarea tag.
     # If they could, then they would be able to display arbitrary html
     # afterwards, and could add malicious JavaScript, iframe content, etc.
-    # [tag:security] [tag:hacking] [tag:hacker]
+    # [tag:security:gem] [tag:hacking:gem] [tag:hacker:gem]
     # gemhack 3 - Update... actually, this may not be necessary since we escape
     # < and > to &lt; and &gt;, but I'll leave it in until I've had a chance
     # to think through it more and be *sure* it's not needed.
@@ -1780,7 +1781,7 @@ sub PH_edit {
     my $remove_branding = page_fopt($page_name, 'exists', "remove_branding");
     my $remove_container_div = page_fopt($page_name, 'exists', "remove_container_div");
 
-    # [tag:privacy] - The blowfish buttons contain a form field.  Do not put
+    # [tag:privacy:gem] - The blowfish buttons contain a form field.  Do not put
     # them within the main form because we don't want to send the secret key
     # to the server along with the textarea.  That would be bad.  The secret
     # key should only ever be in the user's browser, and not available to the
@@ -1828,7 +1829,15 @@ sub PH_edit {
         </form>
     ~;
 
-    hprint($body, {add_blowfish_js => $show_encryption_buttons, remove_branding => $remove_branding, remove_container_div => $remove_container_div});
+    hprint($body,
+        {
+            add_blowfish_js => $show_encryption_buttons,
+            remove_branding => $remove_branding,
+            remove_container_div => $remove_container_div,
+            add_rss_to_head => 1,
+            page_name => $page_name,
+        }
+    );
 }
 
 sub _fopts_params {
@@ -2036,7 +2045,7 @@ sub PH_page_opts {
             </div>
 
             <div style="margin-bottom:30px;">
-                <!--[tag:security] [tag:privacy]-->
+                <!--[tag:security:gem] [tag:privacy:gem]-->
                 <strong>Encryption:</strong> Symmetric-key client-side text encryption and decryption using blowfish.
                 <p style="margin-left:20px;">If you use this:</p>
                 <ul style="margin-left:20px;">
@@ -2726,9 +2735,29 @@ sub hprint {
     my $bodytext = shift;
     my $arg_ref = shift || {};
 
-    my $maybe_create_page_js = "";
-    my $maybe_blowfish_js    = "";
-    my $maybe_keys_js        = "";
+    my $maybe_create_page_js        = '';
+    my $maybe_blowfish_js           = '';
+    my $maybe_keys_js               = '';
+    my $maybe_universal_edit_button = '';
+    my $maybe_rss_button            = '';
+    my $maybe_sortable_table        = '';
+    my $maybe_keys_palette_div      = '';
+    
+    if ($arg_ref->{add_rss_to_head}) {
+        # or maybe go directly to the diffs only page
+        #./?PH_rss&nm_pages=$arg_ref->{page_name}&nm_rss_mode=diffs_only
+        $maybe_rss_button = qq~
+            <link rel="alternate" type="application/rss+xml" title="pageoftext.com: $arg_ref->{page_name}" href="./?PH_choose_rss&nm_pages=$arg_ref->{page_name}" />
+        ~;
+    }
+    
+    if ($arg_ref->{universal_edit_button_url}) {
+        # the url is passed in rather than created here because there is some
+        # logic involved in its creation.
+        $maybe_universal_edit_button = qq~
+            <link rel="alternate" type="application/wiki" title="Edit this page!" href="$arg_ref->{universal_edit_button_url}" />
+        ~;
+    }
 
     if ($arg_ref->{add_create_page_js}) {
 
@@ -2771,7 +2800,7 @@ sub hprint {
 
     if ($arg_ref->{add_blowfish_js}) {
 
-        # [tag:compatibility]
+        # [tag:compatibility:gem]
         # gemhack 5 - If you change the following to be XMTML, it will fail
         # in Internet Explorer 7 for some odd reason.  Don't do it!
         my $do_not_change_formatting_of_script_include = qq~
@@ -2849,15 +2878,13 @@ sub hprint {
         ~;
     }
 
-    my $maybe_sortable_table = '';
     if ($arg_ref->{add_sortable_table_js}) {
         $maybe_sortable_table = qq~<script src="./static/sorttable.js" type="text/javascript"></script>~;
     }
 
-    my $maybe_keys_palette_div = "";
     if ($arg_ref->{add_keys_js}) {
 
-        # [tag:compatibility]
+        # [tag:compatibility:gem]
         # gemhack 5 - If you change the following to be XMTML, it will fail
         # in Internet Explorer 7 for some odd reason.  Don't do it!
         my $do_not_change_formatting_of_script_include = qq~
@@ -2945,7 +2972,7 @@ sub hprint {
         $document_end~);
     }
     else {
-        # [tag:performance] This looks somewhat obfuscated because
+        # [tag:performance:gem] This looks somewhat obfuscated because
         # indenting takes up more bandwidth.
         filter_print(qq~$document_start
     $doubleclick_js
@@ -2966,6 +2993,8 @@ sub hprint {
                 }
             }
         </script>
+    $maybe_universal_edit_button
+    $maybe_rss_button
     </head>
     <body style="margin-left:10px;" onload="do_onload()">
     $start_container_div
@@ -2999,7 +3028,7 @@ sub filter_print {
 #-----------------------------------------------------------------------------
 
 sub _compat_require_file_find {
-    # [tag:compatibility] - we might want to allow for Win32 later,
+    # [tag:compatibility:gem] - we might want to allow for Win32 later,
     # so use as few shell commands as possible.  So, require File::Find.
     # Do this in a subroutine so we only have to put this note in one place.
     require File::Find;

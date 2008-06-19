@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 sub read_file {
-    # [tag:easy_install] - We don't use File::Slurp to avoid prerequisites
+    # [tag:easy_install:gem] - We don't use File::Slurp to avoid prerequisites
     my $filename = shift;
     open(my $fh, "<", $filename)
         || die "Cannot read from file $filename - $!";
@@ -15,7 +15,7 @@ sub read_file {
 }
 
 sub write_file {
-    # [tag:easy_install] - We don't use File::Slurp to avoid prerequisites
+    # [tag:easy_install:gem] - We don't use File::Slurp to avoid prerequisites
     my $filename = shift;
     my $data = shift;
     open(my $fh, ">", $filename)

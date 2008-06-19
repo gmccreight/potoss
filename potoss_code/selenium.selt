@@ -9,6 +9,10 @@
 # and put its directory in the $SELENIUM_SERVER_DIR configuration variable
 # below.
 
+# Here's a good command line for testing if you're running the server yourself
+# and don't want this script to startup or shutdown the server.
+# export POT_TEST_DIR=potoss_dev ; export POT_SELENIUM_SERVER_STARTED_EXTERNALLY=1; export POT_SELENIUM_SERVER_SHUTDOWN_EXTERNALLY=1; export POT_BE_VERBOSE=1; prove /cygdrive/i/potoss_dev_alias/potoss_code/selenium.selt
+
 use strict;
 use warnings;
 use Test::More;
@@ -37,13 +41,34 @@ for my $test_ref (@all_tests) {
 }
 
 my @solo_tests = grep({$_->{solo} == 1} @all_tests);
+my @last_tests = grep({$_->{is_last_test} == 1} @all_tests);
+if (scalar(@last_tests) > 1) {
+    die "only one test can be the last test... check your is_last_test options";
+}
 
 my @tests_to_run = (@solo_tests)
     ? @solo_tests
     : grep({$_->{should_run} == 1} @all_tests);
 
+my @truncated_tests_to_run = ();
+
+# If one of the tests is set to be the last test to run, then truncate the
+# list of tests.
+if (scalar(@last_tests) > 0) {
+    TEST:
+    for my $test (@tests_to_run) {
+        push @truncated_tests_to_run, $test;
+        if ( $test->{is_last_test} ) {
+            last TEST;
+        }
+    }
+}
+else {
+    @truncated_tests_to_run = @tests_to_run;
+}
+
 my $NUM_TESTS_PER_BROWSER = 0;
-for my $test_ref (@tests_to_run) {
+for my $test_ref (@truncated_tests_to_run) {
     $NUM_TESTS_PER_BROWSER += $test_ref->{numtests};
 }
 
@@ -58,10 +83,12 @@ plan( tests => $NUM_TESTS_PER_BROWSER * scalar(@browsers_to_test) );
 # start up the Selenium server in java
 # send both STDOUT and STDERR to files so no 'clutter' messages appear
 # in the console, but you're able to see what happened, if necessary.
-system qq~
-    cd $SELENIUM_SERVER_DIR ;
-    java -jar selenium-server.jar > ./potoss_lastrun_stdout.log 2> ./potoss_lastrun_stderr.log &
-~;
+if (! $ENV{POT_SELENIUM_SERVER_STARTED_EXTERNALLY} ) {
+    system qq~
+        cd $SELENIUM_SERVER_DIR ;
+        java -jar selenium-server.jar > ./potoss_lastrun_stdout.log 2> ./potoss_lastrun_stderr.log &
+    ~;
+}
 
 #give the selenium server a chance to start up...
 sleep 4;
@@ -91,22 +118,27 @@ my $texts_dir = $test_for{$test_dir}->{texts} || die "need texts for test_dir";
 
 die "texts_dir $texts_dir does not exist" unless -d $texts_dir;
 
-if ( scalar(@tests_to_run) != scalar(@all_tests) ) {
-    warn "Just a note: Not running all the tests.  Either some have been solo'd or some have should_run set to zero."
+if ( scalar(@truncated_tests_to_run) != scalar(@all_tests) ) {
+    warn "Just a note: Not running all the tests.  Either some have been solo'd, some have should_run set to zero, or is_last_test is set on one."
 }
 
 BROWSER:
 for my $browser (@browsers_to_test) {
 
+    my $should_be_verbose = ( $ENV{POT_BE_VERBOSE} ) ? 1 : 0;
+
+    my $host = $ENV{POT_SELENIUM_HOST} || "localhost";
+    my $port = $ENV{POT_SELENIUM_PORT} || 4444;
+
     $sel = Test::WWW::Selenium->new(
-        host        => "localhost",
-        port        => 4444,
+        host        => $host,
+        port        => $port,
         browser     => "*$browser->{name}",
         browser_url => "http://$url/",
-        verbose => 0, # set to 1 to see requests as they happen
+        verbose => $should_be_verbose,
     );
 
-    for my $test_ref (@tests_to_run) {
+    for my $test_ref (@truncated_tests_to_run) {
         diag("starting test: $test_ref->{name}");
         $test_ref->{code}->();
         diag("ending test: $test_ref->{name}");
@@ -121,13 +153,15 @@ for my $browser (@browsers_to_test) {
 # to shutDown, which will cause the Java process to end.  This is not
 # documented directly in the Test::WWW::Selenium documentation, but the
 # shutDown command is shown in the Selenium Remote Control documentation.
-$sel && $sel->do_command("shutDown");
+if (! $ENV{POT_SELENIUM_SERVER_SHUTDOWN_EXTERNALLY} ) {
+    $sel && $sel->do_command("shutDown");
+}
 
 sub get_tests {
     return (
 {
     name => "tst_add_remove_search_box",
-    numtests => 25, solo => 0, should_run => 1,
+    numtests => 25, solo => 0, should_run => 1, is_last_test => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -170,7 +204,7 @@ sub get_tests {
 
 {
     name => "tst_try_to_edit_alias",
-    numtests => 10, solo => 0, should_run => 1,
+    numtests => 10, solo => 0, should_run => 1, is_last_test => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -194,7 +228,7 @@ sub get_tests {
 
 {
     name => "tst_iframe_opts_remain",
-    numtests => 12, solo => 0, should_run => 1,
+    numtests => 12, solo => 0, should_run => 1, is_last_test => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -224,7 +258,7 @@ sub get_tests {
 
 {
     name => "tst_changes_in_already_existing_page",
-    numtests => 15, solo => 0, should_run => 1,
+    numtests => 15, solo => 0, should_run => 1, is_last_test => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -253,7 +287,7 @@ sub get_tests {
 
 {
     name => "tst_create_new_page",
-    numtests => 24, solo => 0, should_run => 1,
+    numtests => 24, solo => 0, should_run => 1, is_last_test => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -293,7 +327,7 @@ sub get_tests {
 
 {
     name => "tst_only_one_revision",
-    numtests => 17, solo => 0, should_run => 1,
+    numtests => 17, solo => 0, should_run => 1, is_last_test => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -325,7 +359,7 @@ sub get_tests {
 
 {
     name => "tst_create_page_name_in_dictionary",
-    numtests => 6, solo => 0, should_run => 1,
+    numtests => 6, solo => 0, should_run => 1, is_last_test => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -343,7 +377,7 @@ sub get_tests {
 
 {
     name => "tst_create_page_already_exists",
-    numtests => 6, solo => 0, should_run => 1,
+    numtests => 6, solo => 0, should_run => 1, is_last_test => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -361,7 +395,7 @@ sub get_tests {
 
 {
     name => "tst_create_page_badly_formatted_name",
-    numtests => 7, solo => 0, should_run => 1,
+    numtests => 7, solo => 0, should_run => 1, is_last_test => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -380,7 +414,7 @@ sub get_tests {
 
 {
     name => "tst_encrypt_decrypt_page_content",
-    numtests => 30, solo => 0, should_run => 1,
+    numtests => 30, solo => 0, should_run => 1, is_last_test => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -423,7 +457,7 @@ sub get_tests {
 
 {
     name => "tst_edit_non_head_revision",
-    numtests => 16, solo => 0, should_run => 1,
+    numtests => 16, solo => 0, should_run => 1, is_last_test => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -456,7 +490,7 @@ sub get_tests {
 
 {
     name => "tst_create_two_way_linked_page_link_auto_created",
-    numtests => 23, solo => 0, should_run => 1,
+    numtests => 23, solo => 0, should_run => 1, is_last_test => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -496,7 +530,7 @@ sub get_tests {
 
 {
     name => "tst_create_two_way_linked_page_link_not_auto_created",
-    numtests => 31, solo => 0, should_run => 1,
+    numtests => 31, solo => 0, should_run => 1, is_last_test => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -555,7 +589,7 @@ sub get_tests {
 
 {
     name => "tst_create_one_way_linked_page_link_auto_created",
-    numtests => 23, solo => 0, should_run => 1,
+    numtests => 23, solo => 0, should_run => 1, is_last_test => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -598,7 +632,7 @@ sub get_tests {
 
 {
     name => "tst_create_one_way_linked_page_link_not_auto_created",
-    numtests => 31, solo => 0, should_run => 1,
+    numtests => 31, solo => 0, should_run => 1, is_last_test => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
