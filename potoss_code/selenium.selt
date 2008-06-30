@@ -3,7 +3,7 @@
 # the Test::Harness perl module.
 
 # I (Gordon) have added an alias to Cygwin to ease running this test
-# alias pd='export POT_TEST_DIR=potoss_dev ; prove /cygdrive/i/potoss_alias/potoss_code/selenium.selt'
+# alias pd='export POT_TEST_DIR=potoss_dev ; prove /cygdrive/i/potoss_dev_alias/potoss_code/selenium.selt'
 
 # you will also need to install the Selenium Remote Control application
 # and put its directory in the $SELENIUM_SERVER_DIR configuration variable
@@ -125,8 +125,48 @@ if ( scalar(@truncated_tests_to_run) != scalar(@all_tests) ) {
 BROWSER:
 for my $browser (@browsers_to_test) {
 
-    my $should_be_verbose = ( $ENV{POT_BE_VERBOSE} ) ? 1 : 0;
+    #[tag:performance:gem]
+    # Starting up and shutting down the browser after ~20 tests appears to
+    # speed the tests up overall.  There is some speculation about why at
+    # http://citechnology.blogspot.com/2007/11/improving-selenium-performance-in-ie6.html
+    # All I know is that for my (Gordon's) setup the tests would get *very*
+    # slow as time went on, and they //appear// to be faster when I shut down
+    # and start up the browser over and over after only a small number of
+    # tests have occurred.
 
+    start_selenium_browser($browser);
+
+    my $max_num_tests_per_browser_invocation = $ENV{POT_MAX_NUM_TESTS_PER_BROWSER_INVOCATION} || 20;
+
+    my $num_tests_run_per_browser_invocation = 0;
+
+    for my $test_ref (@truncated_tests_to_run) {
+
+        # It won't shut the browser down in the middle of a test block,
+        # since that wouldn't work, but it will shut the browser down between
+        # test blocks if the maximum number of tests has been exceeded.
+        if ($num_tests_run_per_browser_invocation > $max_num_tests_per_browser_invocation) {
+            stop_selenium_browser();
+            start_selenium_browser($browser);
+            $num_tests_run_per_browser_invocation = 0;
+        }
+
+        diag("starting test: $test_ref->{name}");
+        $test_ref->{code}->();
+        diag("ending test: $test_ref->{name}");
+
+        $num_tests_run_per_browser_invocation += $test_ref->{numtests};
+        
+    }
+
+    stop_selenium_browser();
+
+}
+
+sub start_selenium_browser {
+    my $browser = shift;
+
+    my $should_be_verbose = ( $ENV{POT_BE_VERBOSE} ) ? 1 : 0;
     my $host = $ENV{POT_SELENIUM_HOST} || "localhost";
     my $port = $ENV{POT_SELENIUM_PORT} || 4444;
 
@@ -137,16 +177,12 @@ for my $browser (@browsers_to_test) {
         browser_url => "http://$url/",
         verbose => $should_be_verbose,
     );
+}
 
-    for my $test_ref (@truncated_tests_to_run) {
-        diag("starting test: $test_ref->{name}");
-        $test_ref->{code}->();
-        diag("ending test: $test_ref->{name}");
-    }
-
-    #-------------------------------------------------------------------------
-    CLOSE_BROWSER_TEST();
-
+sub stop_selenium_browser {
+    $sel && $sel->stop();
+    $sel = 0;
+    return 1;
 }
 
 # If there is still an sel object, then send the Remote Control the command
@@ -693,15 +729,6 @@ sub get_tests {
 },
 )  #end of tests array
 }  #end of get_tests subroutine
-
-sub CLOSE_BROWSER_TEST {
-
-    #-------------------------------------------------------------------------
-    sleep 1; #see what happened in the browser window before you close it.
-    $sel && $sel->stop();
-
-    return 1;
-}
 
 sub delete_potoss_tmp_link_pages {
     `cd $texts_dir ; rm -r potoss_tmp_link_page_1_REVS ; rm -r potoss_tmp_link_page_2_REVS ; rm potoss_tmp_link_page_*`;

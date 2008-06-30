@@ -85,7 +85,7 @@ sub homepage {
 
         <a href="./?PH_find">find a page I previously created</a>
     ~;
-    hprint($body);
+    hprint( $body, { special_page_name => "Welcome" } );
 }
 
 sub PH_help_with_find {
@@ -105,7 +105,7 @@ sub PH_help_with_find {
             <div><input type="submit" name="nm_submit" value="send it" class="form"></div>
         </form>
     ~;
-    hprint($body);
+    hprint($body, { special_page_name => "Find Help" } );
 }
 
 sub PH_help_with_find_submit {
@@ -145,7 +145,7 @@ sub PH_help_with_find_submit {
 
     #$body .= "\n<br />\$Mail::Sendmail::log says:\n<br /><br /><br /><br />", $Mail::Sendmail::log;
 
-    hprint($body);
+    hprint($body, { special_page_name => "Find Help Emailed" } );
 }
 
 sub PH_find {
@@ -181,7 +181,7 @@ sub PH_find {
 
         $email_help_message
     ~;
-    hprint($body);
+    hprint($body, { special_page_name => "Find Lost Page" } );
     die; #because this is sometimes called numerous times.
 }
 
@@ -224,7 +224,7 @@ sub PH_find_submit {
         A single matching page was found.  Click <a href="./?$page">here</a> to go to it.
     ~;
 
-    hprint($body);
+    hprint($body, { special_page_name => "Find Lost Page" } );
 }
 
 sub PH_create {
@@ -256,7 +256,7 @@ sub PH_create {
             <div><input type="submit" name="nm_submit" value="create the page" class="form"></div>
         </form>
     ~;
-    hprint($body, {add_create_page_js => 1});
+    hprint($body, {add_create_page_js => 1, special_page_name => "Create" });
 }
 
 sub PH_create_from_page {
@@ -302,7 +302,7 @@ sub PH_create_from_page {
         $more_opts
         
     ~;
-    hprint($body);
+    hprint($body, { page_name => $page_name, sub_page_name => "create new page" } );
 }
 
 sub throw ($) {
@@ -323,7 +323,7 @@ sub throw ($) {
             $exception
         </div>
     ~;
-    hprint($body);
+    hprint($body, { special_page_name => "Error" });
 
     # Abort the rest of the processing, but use "die" because it
     # allows the HTTP::Server::Simple to trap and continue running.
@@ -837,7 +837,7 @@ sub PH_page_links {
     ~;
 
     if ($mode eq 'html') {
-        hprint($body);
+        hprint($body, { page_name => $page_name, sub_page_name => "links" });
     }
     elsif ($mode eq 'rss' or $mode eq 'tgz') {
         #the names of the pages with no circular references
@@ -853,7 +853,7 @@ sub PH_page_links {
         if ($mode eq 'rss') {
             if ( $cgi->param("nm_need_rss_choice") ) {
                 my $url_base = qq~./?PH_page_links&nm_page=$page_name&nm_search_query=$search_query&nm_max_depth=$max_depth&nm_prune_list=$prune_list&nm_sort_by=$sort_by&nm_mode=rss~;
-                hprint( _rss_choose_options($url_base) );
+                hprint( _rss_choose_options($url_base), { page_name => $page_name, sub_page_name => "choose rss" } );
             }
             else {
                 PH_rss($pages_str);
@@ -1337,7 +1337,7 @@ sub page_does_not_exist {
 
     ~;
 
-    hprint($body);
+    hprint($body, { special_page_name => "does not exist" });
 
 }
 
@@ -1517,7 +1517,7 @@ sub PH_choose_rss {
     my $page_names = $cgi->param("nm_pages");
     my $url_base = "./?PH_rss&nm_double_check_names=1&nm_pages=$page_names";
 
-    hprint( _rss_choose_options($url_base) );
+    hprint( _rss_choose_options($url_base), { special_page_name => "choose RSS" } );
 }
 
 sub _rss_choose_options {
@@ -1667,7 +1667,7 @@ my $body = qq~<?xml version="1.0"?>
 </rss>~;
 
     if ($cgi->param("nm_mode") eq 'html') {
-        hprint($body);
+        hprint($body, { special_page_name => "RSS" });
     }
     else {
         if ($ENV{SERVER_SOFTWARE} =~ m{HTTP::Server::Simple}) {
@@ -1836,6 +1836,7 @@ sub PH_edit {
             remove_container_div => $remove_container_div,
             add_rss_to_head => 1,
             page_name => $page_name,
+            sub_page_name => 'edit',
         }
     );
 }
@@ -1933,7 +1934,7 @@ sub PH_compact_page_opts {
 #        $body .= "<p>$key : $fopt_link_for{$key}</p>";
 #    }
 
-    hprint($body, {stylesheet_only => 1});
+    hprint($body, {stylesheet_only => 1, special_page_name => 'compact opts'});
 
 }
 
@@ -2093,7 +2094,7 @@ sub PH_page_opts {
         $text_for_level{$level}
     ~;
 
-    hprint($body);
+    hprint($body, { page_name => $page_name, sub_page_name => "options" });
 }
 
 sub _calculate_linkable_pages_cache {
@@ -2385,7 +2386,7 @@ sub PH_page_revisions {
             <p>As you edit the page, each time you save it a new revision will be saved.</p>
             <p>When there is more than one revision you'll be able to compare revisions here.</p>
         ~;
-        hprint($body);
+        hprint($body, { page_name => $page_name, sub_page_name => "revisions" });
         return;
     }
 
@@ -2400,7 +2401,7 @@ sub PH_page_revisions {
         $body
     ~;
 
-    hprint($body);
+    hprint($body, { page_name => $page_name, sub_page_name => "revisions" });
 }
 
 sub PH_page_submit {
@@ -2472,7 +2473,7 @@ sub PH_pages_tgz {
         <p>The page$plural_s (with all the options and revisions) ha$plural_ve been turned into a tgz file (a zipped tar file)</p>
         <p>You can download the file <a href="./$foldername.tgz">here</a></p>
     ~;
-    hprint($body);
+    hprint($body, { special_page_name => "tar file" });
 }
 
 sub _page_exists {
@@ -2742,6 +2743,18 @@ sub hprint {
     my $maybe_rss_button            = '';
     my $maybe_sortable_table        = '';
     my $maybe_keys_palette_div      = '';
+
+    my $page_title = ($arg_ref->{page_name})
+        ? "page: $arg_ref->{page_name}"
+        : $conf{CNF_SITE_READABLE_NAME};
+
+    if ( $arg_ref->{sub_page_name} ) {
+        $page_title .= " - " . $arg_ref->{sub_page_name};
+    }
+
+    if ( $arg_ref->{special_page_name} ) {
+        $page_title = $conf{CNF_SITE_READABLE_NAME} . " - " . $arg_ref->{special_page_name};
+    }
     
     if ($arg_ref->{add_rss_to_head}) {
         # or maybe go directly to the diffs only page
@@ -2920,22 +2933,7 @@ sub hprint {
         $main_border = '';
     }
 
-    # The global message should go in the branding, so it doesn't show up
-    # in embedded pages.
-    my $global_message = qq~<span style="color:red">I screwed up and deleted all revisions of this page created between midnight and 9am PST. <a href="./screwup_more_info">more info</a></span><br><br>~;
-
-    if ($arg_ref->{page_name}) {
-        if (! _is_in_set($arg_ref->{page_name}, qw(testingbobcowmoof wikiclock cabinet weird_professional_identity_descriptions testingme))) {
-            $global_message = "";
-        }
-    }
-    else {
-        $global_message = "";
-    }
-    $global_message = "";
-
     my $branding = qq~
-        $global_message
         <div style="margin-bottom:10px;background-color:#eee;">
             <a href="./?" class="pot" style="font-size:9px;text-decoration:none;">$conf{CNF_SITE_READABLE_NAME}</a>
         </div>
@@ -2954,7 +2952,7 @@ sub hprint {
     print $cgi->header(-expires => '-1d');
 
     my $document_start = qq~<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
-   "http://www.w3.org/TR/html4/loose.dtd"><html><head><title>$conf{CNF_SITE_READABLE_NAME}</title>
+   "http://www.w3.org/TR/html4/loose.dtd"><html><head><title>$page_title</title>
 <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
 <link rel="stylesheet" href="$conf{CNF_STYLE_SHEET}" type="text/css" />
 ~;

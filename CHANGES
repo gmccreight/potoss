@@ -1,3 +1,18 @@
+version 20080630_1
+Added the page name to the page titles.  Easier to see which page is
+which when you have multiple tabs open in your browser, or when reviewing
+your browser history.
+
+version 20080619_2
+Changes to the selenium test file:
+Starting up and shutting down the browser after ~20 tests appears to
+speed the tests up overall.  There is some speculation about why at
+http://citechnology.blogspot.com/2007/11/improving-selenium-performance-in-ie6.html
+All I know is that for my (Gordon's) setup the tests would get *very*
+slow as time went on, and they //appear// to be faster when I shut down
+and start up the browser over and over after only a small number of
+tests have occurred.
+
 version 20080619_1
 Luke Closs pointed me to universaleditbutton.org, which is a compelling idea.
 Added application/wiki links in the <head>, but then realized that I'd never
