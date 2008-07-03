@@ -17,6 +17,9 @@ use warnings;
 
 my $cgi;
 
+my $should_use_colons = ( exists $conf{CNF_USE_COLONS_IN_URL}
+            && $conf{CNF_USE_COLONS_IN_URL} == 1 ) ? 1 : 0;
+
 sub main {
     $cgi = shift;
 
@@ -37,8 +40,33 @@ sub main {
     
     my @p = $cgi->param();
 
+    
     if (scalar(@p) == 1) {
-        push @p, $cgi->param("keywords");
+        
+        if ( $should_use_colons ) {
+
+            my $keyword = $cgi->param("keywords");
+            if ( $keyword =~ /:/ ) {
+
+                require Potoss::Router;
+                my $router = Potoss::Router->new();
+
+                $router->set_from_string($keyword);
+
+                if ( $router->get_page() && $router->get_action() ) {
+                    $cgi->param(-name => 'nm_page', -value => $router->get_page());
+                    $cgi->param(-name => $router->get_action(), -value => 1);
+                    push @p, $router->get_action();
+                }
+            }
+            else {
+                push @p, $cgi->param("keywords");
+            }
+
+        }
+        else {
+            push @p, $cgi->param("keywords");
+        }
     }
 
     for my $param_key (@p) {
@@ -1242,15 +1270,29 @@ sub show_page {
     my $no_opts_str = ($no_opts) ? "&nm_no_opts=1" : '';
     my $edit_url = "./?PH_edit&nm_page=$page_name&nm_rev=$revision$no_opts_str";
 
+    #If you're not trying to do anything fancy, give a nice URL.
+    if ($should_use_colons && $no_opts_str eq '' && $revision eq 'HEAD') {
+        $edit_url = "./?$page_name:edit";
+    }
+
     if (! $resolved_alias) {
         $edit = qq~<a id="myel_edit_link" href="$edit_url" style="margin-right:40px;">edit this page</a>~;
-        $advanced = qq~<a href="./?PH_page_opts&nm_page=$page_name">advanced options</a>~;
+        if ($should_use_colons) {
+            $advanced = qq~<a href="./?$page_name:options">advanced options</a>~;
+        }
+        else {
+            $advanced = qq~<a href="./?PH_page_opts&nm_page=$page_name">advanced options</a>~;
+        }
     }
     else {
         $edit = qq~<span style="color:red;margin-right:20px;">this page is read only</span>~;
     }
 
-    my $rss_feed_icon = qq~<a href="./?PH_choose_rss&nm_pages=$page_name" style="float:right;">
+    my $rss_url = ($should_use_colons)
+        ? "./?$page_name:rss"
+        : "./?PH_choose_rss&nm_pages=$page_name";
+
+    my $rss_feed_icon = qq~<a href="$rss_url" style="float:right;">
         <img src="./static/rss.jpg" height="12" width="12" border="0"/>
     </a>~;
 
@@ -1264,7 +1306,10 @@ sub show_page {
     my $remove_branding = page_fopt($page_name, 'exists', "remove_branding");
     my $remove_container_div = page_fopt($page_name, 'exists', "remove_container_div");
 
-    my $create_new_link = qq~<a href="./?PH_create_from_page&nm_page=$page_name" style="margin-right:40px;">create a new page</a>~;
+    my $create_new_link = ($should_use_colons)
+        ? qq~<a href="./?$page_name:create" style="margin-right:40px;">create a new page</a>~
+        : qq~<a href="./?PH_create_from_page&nm_page=$page_name" style="margin-right:40px;">create a new page</a>~;
+
     $create_new_link = '' if page_fopt($page_name, 'exists', "remove_create_new_link");
 
     my $blowfish_buttons = ($show_encryption_buttons) ? _blowfish_buttons("decrypt_only") : '';
@@ -1515,6 +1560,12 @@ sub _page_latest_revisions_diffs_html {
 sub PH_choose_rss {
 
     my $page_names = $cgi->param("nm_pages");
+
+    # You can also pass it only one page, if that's your want.
+    if (! $page_names) {
+        $page_names = $cgi->param("nm_page");
+    }
+
     my $url_base = "./?PH_rss&nm_double_check_names=1&nm_pages=$page_names";
 
     hprint( _rss_choose_options($url_base), { special_page_name => "choose RSS" } );
@@ -1701,7 +1752,7 @@ sub _blowfish_buttons {
 
 sub PH_edit {
     my $page_name = $cgi->param("nm_page");
-    my $revision = $cgi->param("nm_rev");
+    my $revision = $cgi->param("nm_rev") || 'HEAD';
     my $no_opts = $cgi->param('nm_no_opts') || 0;
 
     my $textarea_rows = $cgi->param('nm_textarea_rows') || 22;
@@ -1791,6 +1842,11 @@ sub PH_edit {
         : '';
 
     my $cancel_url = "./?PH_show_page&nm_page=$page_name&nm_rev=$revision$no_opts_uri";
+
+    #If you're not trying to do anything fancy, give a nice URL.
+    if ($should_use_colons && $no_opts_uri eq '' && ($revision eq 'HEAD' || $revision eq '') ) {
+        $cancel_url = "./?$page_name";
+    }
 
     my $message_about_type_of_text = (page_fopt($page_name, 'exists', "use_creole"))
         ? qq~<p style="color:#339" style="margin-top: 40px;">

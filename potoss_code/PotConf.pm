@@ -19,6 +19,8 @@ BEGIN { push(@INC, qw(./potoss_code/fallback_libs)); }
 
 our %conf = ();
 
+$conf{CNF_USE_COLONS_IN_URL} = 1;
+
 $conf{CNF_SITE_READABLE_NAME} = 'page of text open source software . com';
 $conf{CNF_SITE_BASE_URL} = 'www.potosssite.com';
 
@@ -51,9 +53,6 @@ $conf{CNF_ADMIN_EMAIL} = 'setme@example.com';
 
 $conf{CNF_HTTP_SERVER_PORT} = 4782;
 
-# Don't allow people to create pages which start with the following phrases.
-$conf{CNF_RESTRICTED_NAMESPACES} = [];
-
 # If you want the URL to be super easy, like www.potosssite.com/page_name
 # then you'll need to set up mod_rewrite in Apache.  Once you've done that
 # you can set this directive to 1, which will strip all the question marks
@@ -72,7 +71,7 @@ $conf{CNF_SHOULD_STRIP_QUESTION_MARKS} = 0;
 #    <Directory /var/potosssite>
 #    
 #       RewriteEngine on
-#       RewriteRule ^([A-Za-z_0-9&=-]+)$ index.cgi?$1
+#       RewriteRule ^([A-Za-z_0-9&=\\:-]+)$ index.cgi?$1
 #        
 #	    <FilesMatch "\.cgi$">
 #            Options +ExecCGI
