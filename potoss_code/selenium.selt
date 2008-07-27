@@ -19,8 +19,12 @@ use Test::More;
 use Test::WWW::Selenium;
 
 # Needs to be newer than the Version 1.0 beta 1 to test Firefox 3.
+#my $SELENIUM_SERVER_DIR =
+#qq~"C:\\Program Files\\selenium-remote-control-1.0-nightly\\server"~;
 my $SELENIUM_SERVER_DIR =
-    qq~"C:\\Program Files\\selenium-remote-control-1.0-nightly\\server"~;
+    qq~"/Applications/selenium-server-1.0-SNAPSHOT"~;
+    
+my $POTOSS_DIR = "/Volumes/gmccreight/public_html/mnt/potoss_dev";
 
 my @BROWSERS = (
     { name => 'firefox',  should_test => 1 },
@@ -102,12 +106,12 @@ my %test_for = (
     potoss_dev => {
         url   => 'www.potoss_dev.com', # you can set this in your HOSTS file
         dir   => '/?',
-        texts => '/cygdrive/i/potoss_dev_alias/potoss_data/texts_8s73f9dv/',
+        texts => "$POTOSS_DIR/potoss_data/texts_8s73f9dv/",
     },
     potoss_dev_http_simple => {
         url   => 'www.potoss_dev.com:4782', # you can set this in your HOSTS file
         dir   => '/?',
-        texts => '/cygdrive/i/potoss_dev_alias/potoss_data/texts_8s73f9dv/',
+        texts => "$POTOSS_DIR/potoss_data/texts_8s73f9dv/",
     },
     #TEMPLATE_ADD_EXTRA_SELENIUM_TEST_DIRS
 );
@@ -181,7 +185,6 @@ sub start_selenium_browser {
 
 sub stop_selenium_browser {
     $sel && $sel->stop();
-    $sel = 0;
     return 1;
 }
 
@@ -235,6 +238,195 @@ sub get_tests {
         my_loads_ok();
         $sel->click_ok("link=go back to the page");
         my_loads_ok();
+    },
+},
+
+{
+    name => "tst_find_page_successfull",
+    numtests => 13, solo => 0, should_run => 1, is_last_test => 0,
+    code => sub {
+        #-------------------------------------------------------------------------
+        # Story:
+        # A user looks for a lost page, and is successful in finding one.
+        # Success is finding only one matching page, and being able to click
+        # on it, and going to the page.
+        #-------------------------------------------------------------------------
+
+        $sel->open_ok($dir);
+        my_loads_ok();
+        $sel->click_ok("link=find a page I previously created");
+        my_loads_ok();
+        $sel->type_ok("nm_word_0", "Downieville");
+        $sel->type_ok("nm_word_1", "Parsin");
+        $sel->type_ok("nm_word_2", "mountain");
+        $sel->click_ok("nm_submit");
+        my_loads_ok();
+        $sel->is_text_present_ok("single matching page was found");
+        $sel->click_ok("link=here");
+        my_loads_ok();
+        $sel->is_text_present_ok("Downieville is a great place to go mountain biking");
+
+    },
+},
+
+{
+    name => "tst_find_page_two_pages_match",
+    numtests => 10, solo => 0, should_run => 1, is_last_test => 0,
+    code => sub {
+        #-------------------------------------------------------------------------
+        # Story:
+        # A user looks for a lost page, but isn't successful in finding it
+        # because there is more than one page which matches, so the results
+        # aren't shown.
+        #-------------------------------------------------------------------------
+
+        $sel->open_ok($dir);
+        my_loads_ok();
+        $sel->click_ok("link=find a page I previously created");
+        my_loads_ok();
+        $sel->type_ok("nm_word_0", "potoss");
+        $sel->type_ok("nm_word_1", "wikiwikiwiki");
+        $sel->type_ok("nm_word_2", "lampstack");
+        $sel->click_ok("nm_submit");
+        my_loads_ok();
+        $sel->is_text_present_ok("More than one page matches, so we can't reveal them.");
+
+    },
+},
+
+{
+    name => "tst_find_page_word_too_short",
+    numtests => 10, solo => 0, should_run => 1, is_last_test => 0,
+    code => sub {
+        #-------------------------------------------------------------------------
+        # Story:
+        # A user looks for a lost page, but puts in la for the third word,
+        # which is too short.
+        #-------------------------------------------------------------------------
+
+        $sel->open_ok($dir);
+        my_loads_ok();
+        $sel->click_ok("link=find a page I previously created");
+        my_loads_ok();
+        $sel->type_ok("nm_word_0", "potoss");
+        $sel->type_ok("nm_word_1", "wikiwikiwiki");
+        $sel->type_ok("nm_word_2", "la");
+        $sel->click_ok("nm_submit");
+        my_loads_ok();
+        $sel->is_text_present_ok("word 3, la, is too short");
+
+    },
+},
+
+{
+    name => "tst_find_page_word_in_dictionary",
+    numtests => 10, solo => 0, should_run => 1, is_last_test => 0,
+    code => sub {
+        #-------------------------------------------------------------------------
+        # Story:
+        # A user looks for a lost page, but puts in "dream" for the first word.
+        # Since it's in the dictionary, it fails.
+        #-------------------------------------------------------------------------
+
+        $sel->open_ok($dir);
+        my_loads_ok();
+        $sel->click_ok("link=find a page I previously created");
+        my_loads_ok();
+        $sel->type_ok("nm_word_0", "dream");
+        $sel->type_ok("nm_word_1", "wikiwikiwiki");
+        $sel->type_ok("nm_word_2", "lampstack");
+        $sel->click_ok("nm_submit");
+        my_loads_ok();
+        $sel->is_text_present_ok("word 1, dream, is in the dictionary");
+
+    },
+},
+
+{
+    name => "tst_find_page_word_not_alphanumeric",
+    numtests => 10, solo => 0, should_run => 1, is_last_test => 0,
+    code => sub {
+        #-------------------------------------------------------------------------
+        # Story:
+        # A user looks for a lost page, but puts in "blah_blah_blah" for the
+        # second word.
+        # Since it's not an alphanumeric word, it fails.
+        #-------------------------------------------------------------------------
+
+        $sel->open_ok($dir);
+        my_loads_ok();
+        $sel->click_ok("link=find a page I previously created");
+        my_loads_ok();
+        $sel->type_ok("nm_word_0", "potoss");
+        $sel->type_ok("nm_word_1", "blah_blah_blah");
+        $sel->type_ok("nm_word_2", "lampstack");
+        $sel->click_ok("nm_submit");
+        my_loads_ok();
+        $sel->is_text_present_ok("word 2, blah_blah_blah, contains non-alphanumeric characters");
+
+    },
+},
+
+{
+    name => "tst_find_page_not_successfull_because_hidden",
+    numtests => 39, solo => 0, should_run => 1, is_last_test => 0,
+    code => sub {
+        #-------------------------------------------------------------------------
+        # Story:
+        # A user doesn't want his page to be able to be found using the
+        # 'find your lost page' functionality.  He goes to the page, turns the
+        # functionality off, and the page will no longer show up in the lost
+        # page results.
+        #-------------------------------------------------------------------------
+
+        # Go to the page and hide the page from any find results
+        $sel->open_ok("${dir}potoss_test_find_page_1");
+        my_loads_ok();
+        $sel->click_ok("link=advanced options");
+        my_loads_ok();
+        $sel->click_ok("link=more advanced");
+        my_loads_ok();
+        $sel->click_ok("link=hide the page in the 'find a page' results");
+        my_loads_ok();
+        
+        # Check to see that the page isn't being shown in the results
+        $sel->open_ok($dir);
+        my_loads_ok();
+        $sel->click_ok("link=find a page I previously created");
+        my_loads_ok();
+        $sel->type_ok("nm_word_0", "Downieville");
+        $sel->type_ok("nm_word_1", "Parsin");
+        $sel->type_ok("nm_word_2", "mountain");
+        $sel->click_ok("nm_submit");
+        my_loads_ok();
+        $sel->is_text_present_ok("it can't be shown here");
+        
+        # To get things back to normal, go back to the page and allow
+        # the page to be shown.
+        $sel->open_ok("${dir}potoss_test_find_page_1");
+        my_loads_ok();
+        $sel->click_ok("link=advanced options");
+        my_loads_ok();
+        $sel->click_ok("link=more advanced");
+        my_loads_ok();
+        $sel->click_ok("link=show the page from the 'find a page' results");
+        my_loads_ok();
+        
+        # The page should show up in the results once again.
+        $sel->open_ok($dir);
+        my_loads_ok();
+        $sel->click_ok("link=find a page I previously created");
+        my_loads_ok();
+        $sel->type_ok("nm_word_0", "Downieville");
+        $sel->type_ok("nm_word_1", "Parsin");
+        $sel->type_ok("nm_word_2", "mountain");
+        $sel->click_ok("nm_submit");
+        my_loads_ok();
+        $sel->is_text_present_ok("single matching page was found");
+        $sel->click_ok("link=here");
+        my_loads_ok();
+        $sel->is_text_present_ok("Downieville is a great place to go mountain biking");
+
     },
 },
 

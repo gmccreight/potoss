@@ -210,7 +210,10 @@ sub PH_find {
         $email_help_message
     ~;
     hprint($body, { special_page_name => "Find Lost Page" } );
-    die; #because this is sometimes called numerous times.
+    
+    # die here because this is sometimes called numerous times, or from other
+    # subroutines which we don't want to return to.
+    die;
 }
 
 sub PH_find_submit {
@@ -246,7 +249,13 @@ sub PH_find_submit {
     }
 
     my $page = $pages[0];
+    chomp($page); #page has a newline...
     $page =~ s/_HEAD$//;
+    
+    #[tag:security:gem] [tag:privacy:gem]
+    if ( page_fopt($page, 'exists', "hide_from_find") ) {
+        PH_find("A page which matches your search was found, but it has its 'hide from find' option set, so it can't be shown here.");
+    }
 
     my $body = qq~
         A single matching page was found.  Click <a href="./?$page">here</a> to go to it.
@@ -2054,6 +2063,13 @@ sub PH_page_opts {
                 <p style="margin-left:20px;">Add a search box to the top of the page.  If you have links to other pages, you will be able to search the other pages using the search box.</p>
                 <p style="margin-left:20px;">$fopt_link_for{"show_search_box"}</p>
             </div>
+            
+            <div style="margin-bottom:30px;">
+                <strong>Hide from find results</strong>
+                <p style="margin-left:20px;">Hide the page from the 'find a page' search results.</p>
+                <p style="margin-left:20px;">You might want to do this if you're concerned about people accidentally finding this page when they're looking for a page they lost, and you're sure you won't forget the page's URL.</p>
+                <p style="margin-left:20px;">$fopt_link_for{"hide_from_find"}</p>
+            </div>
 
             <div style="margin-bottom:30px;"><strong>Creole</strong>
                 <p style="margin-left:20px;">$fopt_link_for{"use_creole"}</p>
@@ -2175,8 +2191,6 @@ sub page_fopt {
 
     my %fopts = get_fopts();
 
-
-
     #start_of_strict_tests-can_remove_for_performance
 
     if (! _is_in_set($get_create_or_remove, qw(get create remove exists)) ) {
@@ -2268,6 +2282,17 @@ return (
             "The text has been <strong>wrapped</strong> at 80 characters",
             no_link => "<strong>wrap</strong> the text",
             yes_link => "<strong>unwrap</strong> the text",
+    },
+    hide_from_find => {
+        level => 'more',
+        is_boolean => 1,
+        is_color => 0,
+        yes_message =>
+            "The page is <strong>no longer</strong> shown in the 'find a page' results",
+        no_message =>
+            "The page is now <strong>shown</strong> in the 'find a page' results",
+            no_link => "<strong>show</strong> the page from the 'find a page' results",
+            yes_link => "<strong>hide</strong> the page in the 'find a page' results",
     },
     use_creole => {
         level => 'more',

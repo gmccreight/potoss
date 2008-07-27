@@ -1,3 +1,8 @@
+version 20080727_1
+Added the ability to hide pages from the 'find lost page'
+results.  Added selenium tests for all sorts of variations on the 'find lost
+page' results.  Hadn't realized that they weren't tested, except by hand.
+
 version 20080703_1
 Added the ability to use colons to allow for some of the simpler page
 actions.  For example, http://www.pageoftext.com/test_page:edit will
