@@ -1,3 +1,12 @@
+version 20090108_1
+Worked on the encryption stuff so that:
+   * It automatically focuses on the blowfish key input on page load
+   * It will encrypt or decrypt when you hit "Enter" while within the input.
+   * The text you input is not visible while you type it.
+I did all this stuff because I use an encrypted page, and I wanted to be able
+to decrypt it more quickly without having to hit all sorts of buttons and
+manually focus on the field.
+
 version 20080727_1
 Added the ability to hide pages from the 'find lost page'
 results.  Added selenium tests for all sorts of variations on the 'find lost

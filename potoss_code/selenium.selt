@@ -18,13 +18,15 @@ use warnings;
 use Test::More;
 use Test::WWW::Selenium;
 
-# Needs to be newer than the Version 1.0 beta 1 to test Firefox 3.
-#my $SELENIUM_SERVER_DIR =
-#qq~"C:\\Program Files\\selenium-remote-control-1.0-nightly\\server"~;
-my $SELENIUM_SERVER_DIR =
-    qq~"/Applications/selenium-server-1.0-SNAPSHOT"~;
-    
-my $POTOSS_DIR = "/Volumes/gmccreight/public_html/mnt/potoss_dev";
+sub pick_best_path {
+    for my $dir (@_) {
+        return $dir if -d $dir;
+    }
+    die "no path matching any of the paths in @_ found";
+}
+
+my $SELENIUM_SERVER_DIR = pick_best_path("C:\\\\Program Files\\\\selenium-remote-control-1.0-nightly\\\\server", "/Applications/selenium-server-1.0-SNAPSHOT");
+my $POTOSS_DIR = pick_best_path("/Volumes/gmccreight/public_html/mnt/potoss_dev", "/cygdrive/i/public_html/mnt/potoss_dev");
 
 my @BROWSERS = (
     { name => 'firefox',  should_test => 1 },
@@ -89,7 +91,7 @@ plan( tests => $NUM_TESTS_PER_BROWSER * scalar(@browsers_to_test) );
 # in the console, but you're able to see what happened, if necessary.
 if (! $ENV{POT_SELENIUM_SERVER_STARTED_EXTERNALLY} ) {
     system qq~
-        cd $SELENIUM_SERVER_DIR ;
+        cd "$SELENIUM_SERVER_DIR" ;
         java -jar selenium-server.jar > ./potoss_lastrun_stdout.log 2> ./potoss_lastrun_stderr.log &
     ~;
 }

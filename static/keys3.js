@@ -9,12 +9,18 @@ function myKeyDown(e){
   var tag = '';
 
   if (window.Event){
+    element = e.target;
     tag = e.target.tagName;
     mykey = e.which;
   }
   else{
+    element = event.srcElement
     tag = event.srcElement.tagName;
     mykey = event.keyCode;
+  }
+
+  if (element.id == "myel_blowfish_key" && mykey == 13) {
+    enter_was_typed_in_blowfish_key_input();
   }
 
   //disable shortcuts if in input or textarea

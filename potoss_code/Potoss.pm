@@ -1754,7 +1754,7 @@ sub _blowfish_buttons {
     <div style="padding:10px;background-color:#eee;">
         $encrypt
         <a href="javascript:do_blowfish('decrypt', document.getElementById('myel_blowfish_key').value)">decrypt</a> using the key
-        <input id="myel_blowfish_key" type="text" value="some_key" />
+        <input id="myel_blowfish_key" type="password" value="" />
     </div>
     ~;
 }
@@ -1867,7 +1867,7 @@ sub PH_edit {
         ;
 
     my $onclick_javascript_verify_encrypted = ($blowfish_buttons_do_not_put_in_form)
-        ? qq~onclick="check_textarea_encrypted();"~
+        ? qq~onclick="only_submit_if_textarea_encrypted();"~
         : qq~onclick="document.getElementById('fr_edit_page').submit();"~;
 
     my $body = qq~
@@ -1897,6 +1897,7 @@ sub PH_edit {
     hprint($body,
         {
             add_blowfish_js => $show_encryption_buttons,
+            add_keys_js               => 1,
             remove_branding => $remove_branding,
             remove_container_div => $remove_container_div,
             add_rss_to_head => 1,
@@ -2904,14 +2905,47 @@ sub hprint {
         $maybe_blowfish_js = qq~
             <script type="text/javascript" language="javascript">
 
-                function check_textarea_encrypted () {
-                    var ps = document.getElementById('myel_text_area').value;
+                function is_text_encrypted () {
+
+                    var ps = "";
+
+                    //Works with either the text in edit mode or in view mode
+                    if ( document.getElementById('myel_text_area') ) {
+                        ps = document.getElementById('myel_text_area').value;
+                    }
+                    else if ( document.getElementById('myel_text') ) {
+                        ps = document.getElementById('myel_text').innerHTML;
+                        ps = ps.replace(/<br>/ig, "");
+                    }
+
                     if ( ps.match(/^[0-9A-F]+\$/) == undefined ) {
+                        return 0;
+                    }
+
+                    return 1;
+                }
+
+                function only_submit_if_textarea_encrypted () {
+                    var ps = document.getElementById('myel_text_area').value;
+                    if ( is_text_encrypted() == 0 ) {
                         confirm("The text appears to not be encrypted.  Are you sure you want to save?")
                             && document.getElementById('fr_edit_page').submit();
                     }
                     else {
                         document.getElementById('fr_edit_page').submit();
+                    }
+                }
+
+                function enter_was_typed_in_blowfish_key_input () {
+                    if ( is_text_encrypted() ) {
+                        do_blowfish('decrypt', document.getElementById('myel_blowfish_key').value);
+                    }
+                    else {
+                        // Only actually encrypt if you happen to be in the "edit" page.
+                        // It doesn't make much sense in the "view" page.
+                        if ( document.getElementById('myel_text_area') ) {
+                            do_blowfish('encrypt', document.getElementById('myel_blowfish_key').value);
+                        }
                     }
                 }
 
@@ -3061,7 +3095,10 @@ sub hprint {
     $maybe_sortable_table
         <script>
             function do_onload () {
-                if ( document.getElementById('myel_text_area') ) {
+                if ( document.getElementById('myel_blowfish_key') ) {
+                    document.getElementById('myel_blowfish_key').focus();
+                }
+                else if ( document.getElementById('myel_text_area') ) {
                     document.getElementById('myel_text_area').focus();
                 }
                 else if ( document.getElementById('myel_search_query') ) {
