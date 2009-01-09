@@ -644,7 +644,7 @@ sub get_tests {
 
 {
     name => "tst_encrypt_decrypt_page_content",
-    numtests => 30, solo => 0, should_run => 1, is_last_test => 0,
+    numtests => 54, solo => 0, should_run => 1, is_last_test => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -673,8 +673,61 @@ sub get_tests {
         $sel->click_ok("link=decrypt");
         ok($sel->get_value("myel_text_area") =~ /^Here is some unencrypted content/);
         ok($sel->get_value("myel_text_area") =~ /Less than < and greater than > and ampersand & and question mark \?/);
-        #go back to the main page
-        $sel->click_ok("//input[\@value='cancel']");
+
+        # now, instead of clicking the "encrypt" and "decrypt" buttons,
+        # just hit enter while in the myel_blowfish_key input
+        $sel->key_down_ok("myel_blowfish_key", "\\13");
+        ok($sel->get_value("myel_text_area") =~ /^4BE6B52958CAF3FA48780A3D72959F9DC87/);
+        $sel->key_down_ok("myel_blowfish_key", "\\13");
+        ok($sel->get_value("myel_text_area") =~ /^Here is some unencrypted content/);
+        ok($sel->get_value("myel_text_area") =~ /Less than < and greater than > and ampersand & and question mark \?/);
+
+        # The text is not encrypted, so when you click on the submit button
+        # A confirmation should pop up asking if you're sure you want to save.
+        $sel->choose_cancel_on_next_confirmation_ok();
+        $sel->click_ok("nm_submit");
+        
+        WAIT: {
+            for (1..10) {
+                if (eval { $sel->is_confirmation_present() }) { pass("confirmation is present"); last WAIT }
+                sleep(1);
+            }
+            fail("timeout waiting for confirmation to be present");
+        }
+        ok($sel->get_confirmation() =~ /^The text appears to not be encrypted\.  Are you sure you want to save/);
+        
+        # Encrypt it and save it so we can try decrypting it from the "view".
+        $sel->key_down_ok("myel_blowfish_key", "\\13");
+        ok($sel->get_value("myel_text_area") =~ /^4BE6B52958CAF3FA48780A3D72959F9DC87/);
+        $sel->click_ok("nm_submit");
+
+        # In the view, try decrypting by typing in the key and Enter
+        my_wait_until_text_present_ok("advanced options", 1);
+        $sel->is_text_present_ok("4BE6B52958CAF3FA48780A3D72959F9DC87");
+        $sel->type_ok("myel_blowfish_key", "asimplekey");
+        $sel->key_down_ok("myel_blowfish_key", "\\13");
+        $sel->is_text_present_ok("Here is some unencrypted content");
+        $sel->click_ok("myel_edit_link");
+        my_loads_ok();
+
+        # Back in the edit mode, decrypt the text and save it, which requires
+        # agreeing to a confirmation (since it doesn't really want to save
+        # unencrypted text.
+        $sel->type_ok("myel_blowfish_key", "asimplekey");
+        $sel->key_down_ok("myel_blowfish_key", "\\13");
+        ok($sel->get_value("myel_text_area") =~ /^Here is some unencrypted content/);
+        $sel->click_ok("nm_submit");
+        WAIT: {
+            for (1..10) {
+                if (eval { $sel->is_confirmation_present() }) { pass("confirmation is present"); last WAIT }
+                sleep(1);
+            }
+            fail("timeout waiting for confirmation to be present");
+        }
+        ok($sel->get_confirmation() =~ /^The text appears to not be encrypted\.  Are you sure you want to save/);
+
+        # Go back to the main page and remove the encryption buttons from the
+        # page.
         my_wait_until_text_present_ok("advanced options", 1);
         $sel->click_ok("link=advanced options");
         my_loads_ok();

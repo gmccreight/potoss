@@ -1,3 +1,12 @@
+version 20090108_2
+Added a bunch of Selenium assertions to the pre-existing
+tst_encrypt_decrypt_page_content test.  It now checks for pressing enter
+or clicking on the "encrypt" or "decrypt" buttons.  It also checks for the
+confirmation dialog which pops up if you try to save a page that has the
+encryption options showing but the text hasn't been encrypted. (Since the
+user might have made a mistake, and might not want the contents going to the
+server unencrypted)
+
 version 20090108_1
 Worked on the encryption stuff so that:
    * It automatically focuses on the blowfish key input on page load
