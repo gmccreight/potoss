@@ -200,6 +200,62 @@ if (! $ENV{POT_SELENIUM_SERVER_SHUTDOWN_EXTERNALLY} ) {
 
 sub get_tests {
     return (
+
+{
+    name => "tst_add_and_remove_a_readonly_alias",
+    numtests => 29, solo => 0, should_run => 1, is_last_test => 0,
+    code => sub {
+        #-------------------------------------------------------------------------
+        # Story:
+        # A user wants to add a second readonly alias to a page that already
+        # has one.
+        #-------------------------------------------------------------------------
+
+        $sel->open_ok("${dir}potoss_saved_test");
+        $sel->is_text_present_ok("this is change 1");
+        
+        $sel->click_ok("link=advanced options");
+        my_loads_ok();
+        $sel->click_ok("link=very advanced");
+        my_loads_ok();
+        $sel->value_is("nm_read_only_aliases", "potoss_wow");
+
+
+        # Add another alias
+        $sel->type_ok("nm_read_only_aliases", "potoss_wow, potoss_new_alias");
+        $sel->click_ok("nm_submit");
+        my_loads_ok();
+        $sel->is_text_present_ok("The read-only aliases were set.");
+        $sel->value_is("nm_read_only_aliases", "potoss_wow, potoss_new_alias");
+
+        # Check that the new alias page works
+        $sel->open_ok("${dir}potoss_new_alias");
+        $sel->is_text_present_ok("this page is read only");
+        $sel->is_text_present_ok("this is change 1");
+
+        # Now go back to the original page and remove the alias you just created
+        $sel->open_ok("${dir}potoss_saved_test");
+        $sel->is_text_present_ok("this is change 1");
+        $sel->click_ok("link=advanced options");
+        my_loads_ok();
+        $sel->click_ok("link=very advanced");
+        my_loads_ok();
+        $sel->value_is("nm_read_only_aliases", "potoss_wow, potoss_new_alias");
+
+        # Remove the new alias
+        $sel->type_ok("nm_read_only_aliases", "potoss_wow");
+        $sel->click_ok("nm_submit");
+        my_loads_ok();
+        $sel->is_text_present_ok("The read-only aliases were set.");
+        $sel->value_is("nm_read_only_aliases", "potoss_wow");
+
+        # Check that the new alias page is no longer present
+        $sel->open_ok("${dir}potoss_new_alias");
+        $sel->is_text_present_ok("This page doesn't exist.");
+
+    },
+},
+
 {
     name => "tst_add_remove_search_box",
     numtests => 25, solo => 0, should_run => 1, is_last_test => 0,

@@ -1,3 +1,8 @@
+version 20090612_1
+Added the ability to control read-only aliases directly from the
+"advanced options" for a page.  In support of that new functionality
+I added a slew of unit tests and one new Selenium test.
+
 version 20090108_2
 Added a bunch of Selenium assertions to the pre-existing
 tst_encrypt_decrypt_page_content test.  It now checks for pressing enter
