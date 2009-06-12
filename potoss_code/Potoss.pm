@@ -1915,8 +1915,8 @@ sub _fopts_params {
     for my $fopt_name (sort keys %fopts) {
 
         my $param = $cgi->param("nm_" . $fopt_name);
-        if ($param){
-            if ($fopts{$fopt_name}->{is_boolean}) {
+        if (defined $param){
+            if ($fopts{$fopt_name}->{data_type} eq 'bool') {
                 my $action = ($param eq 'yes') ? 'create' : 'remove';
                 page_fopt($page_name, $action, $fopt_name);
                 $message = $fopts{$fopt_name}->{"${param}_message"};
@@ -1925,7 +1925,7 @@ sub _fopts_params {
                     _calculate_linkable_pages_cache();
                 }
             }
-            elsif ($fopts{$fopt_name}->{is_color}) {
+            elsif ($fopts{$fopt_name}->{data_type} eq 'color') {
                 if ($param !~ m{[0-9a-fA-F]{3,6}}) {
                     throw("Must be a valid hexadecimal color without the prepended #");
                 }
@@ -1934,12 +1934,155 @@ sub _fopts_params {
                     $message = $fopts{$fopt_name}->{set_message};
                 }
             }
+            elsif ($fopts{$fopt_name}->{data_type} eq 'read_only_page_name_list') {
+
+                my $pre_existing_page_aliases_list_string = page_fopt($page_name, 'get', $fopt_name);
+                set_read_only_aliases_from_page_list($page_name, $param, $pre_existing_page_aliases_list_string);
+                page_fopt($page_name, 'create', $fopt_name, $param);
+                $message = $fopts{$fopt_name}->{set_message};
+            }
         }
     }
 
     return $message;
 
 }
+
+#-----------------------------------------------------------------------------
+#-----------------------------------------------------------------------------
+# Start Aliases
+#-----------------------------------------------------------------------------
+#-----------------------------------------------------------------------------
+
+sub _page_is_an_alias {
+    my $page_name = shift;
+
+    if ( _resolve_alias($page_name) eq $page_name ) {
+        return 0;
+    }
+    else {
+        return 1;
+    }
+}
+
+sub _resolve_alias {
+    my $page_name = shift;
+
+    my $resolved_alias = _is_page_alias_for($page_name);
+    if ($resolved_alias){
+        return $resolved_alias;
+    }
+
+    return $page_name;
+}
+
+sub _is_page_alias_for {
+    my $page_name = shift;
+
+    my $filename = "$conf{CNF_TEXTS_DIR}/$page_name";
+    my $alias_file = $filename . "_ALIAS";
+
+    if (-e $alias_file){
+        my $target_page_name = Potoss::File::read_file($alias_file);
+        chomp($target_page_name);
+        return $target_page_name;
+    }
+
+    my $deactivated_alias_file = $filename . "_ALIAS_DEACTIVATED";
+
+    if (-e $deactivated_alias_file){
+        throw("this alias has been deactivated");
+    }
+
+    return 0;
+}
+
+sub _get_alias_filename_for_alias_page_name {
+    my $page_name = shift;
+    my $filename = "$conf{CNF_TEXTS_DIR}/$page_name";
+    my $alias_file = $filename . "_ALIAS";
+}
+
+sub _create_alias {
+    my $page_name = shift;
+    my $alias_page_name = shift;
+
+    my $alias_file = _get_alias_filename_for_alias_page_name($alias_page_name);
+    Potoss::File::write_file($alias_file, $page_name);
+}
+
+sub _remove_alias {
+    my $alias_page_name = shift;
+
+    if (! _page_is_an_alias($alias_page_name) ) {
+        throw("cannot remove the alias listed in page $alias_page_name because page $alias_page_name is not an alias.");
+    }
+
+    my $alias_file = _get_alias_filename_for_alias_page_name($alias_page_name);
+
+    if (! -e $alias_file) {
+        throw("Trying to remove an alias file, $alias_file, that does not exist.");
+    }
+
+    unlink($alias_file);
+}
+
+sub set_read_only_aliases_from_page_list {
+    my $page_name = shift;
+    my $new_page_aliases_list_string = shift || "";
+    my $pre_existing_page_aliases_list_string = shift || "";
+
+    if (! _page_exists($page_name) ) {
+        throw("The page you're trying to set aliases for, $page_name, does not exist.");
+    }
+
+    # Check that the new list of page_names supplied by the form
+    # is of the correct format, and will actually work.
+    my @new_page_alias_list = split(/\s*,\s*/, $new_page_aliases_list_string);
+
+    if ( scalar(@new_page_alias_list) > 5 ) {
+        throw("Sorry, but you cannot create more than five read-only aliases to a page.");
+    }
+
+    for my $alias_page_name ( @new_page_alias_list ) {
+        my $base_error = "The page name, $alias_page_name, in your read-only list";
+        if ( _check_page_name_is_ok($alias_page_name) ne 'ok' ) {
+            throw("$base_error does not match the page naming criteria.");
+        }
+
+        if ( _page_exists($alias_page_name) && ! _page_is_an_alias($alias_page_name) ) {
+            throw("$base_error is already a real page, so it can't be made into a read-only list.");
+        }
+
+        if ( _page_is_an_alias($alias_page_name) && _resolve_alias($alias_page_name) ne $page_name ) {
+            throw("$base_error is already a read-only alias for another page.");
+        }
+    }
+
+    # If there is already a stored list of read-only alias pages,
+    # remove any that are no longer in the newly provided list
+    # before you add the new ones.
+    my @preexisting_list = split(/\s*,\s*/, $pre_existing_page_aliases_list_string);
+    if ( @preexisting_list ) {
+        for my $pre_existing_page_alias (@preexisting_list) {
+            if (! grep {$_ eq $pre_existing_page_alias} @new_page_alias_list ) {
+                _remove_alias($pre_existing_page_alias);
+            }
+        }
+    }
+
+    # Now, create any new alias files.
+    for my $alias_page_name ( @new_page_alias_list ) {
+        _create_alias($page_name, $alias_page_name);
+    }
+
+}
+
+#-----------------------------------------------------------------------------
+#-----------------------------------------------------------------------------
+# End Aliases
+#-----------------------------------------------------------------------------
+#-----------------------------------------------------------------------------
 
 sub _fopts_links {
     my $page_name = shift;
@@ -1951,7 +2094,7 @@ sub _fopts_links {
 
         my $level = $fopts{$fopt_name}->{level};
         my $url_base = qq~<a href="./?$url&nm_page=$page_name&nm_level=$level&nm_$fopt_name=~;
-        if ($fopts{$fopt_name}->{is_boolean}) {
+        if ($fopts{$fopt_name}->{data_type} eq 'bool') {
             if ( page_fopt($page_name, 'exists', $fopt_name) ){
                 $fopt_link_for{$fopt_name} = $url_base . qq~no">~
                     . $fopts{$fopt_name}->{no_link} . "</a>";
@@ -2080,15 +2223,12 @@ sub PH_page_opts {
                 <p style="margin-left:20px;">You can double click on the text to edit it.</p>
             </div>
 
-            <p style="margin-top:30px;"><strong>Soon to come:</strong><p>
-            <ul>
-                <li>Creation of readonly page aliases</li>
-            </ul>
         </div>
     ~;
 
     my $plain_text_url = "http://$conf{CNF_SITE_BASE_URL}/?PH_plain&nm_page=$page_name";
     my $bar_color_hex = page_fopt($page_name, 'get', 'bar_color_hex') || 'eee';
+    my $read_only_aliases = page_fopt($page_name, 'get', 'read_only_aliases') || '';
 
     $text_for_level{very} = qq~
             <div style="margin-bottom:30px;"><strong>Keyboard Shortcuts</strong>
@@ -2113,9 +2253,21 @@ sub PH_page_opts {
                 <p style="margin-left:20px;">Click <a href="./?PH_pages_tgz&nm_pages=$page_name">here</a> to create the tgz file.</p>
             </div>
 
-            <div style="margin-bottom:30px;"><strong>Page Links</strong>
-                <p style="margin-left:20px;">(Subject To Change... will be part of link search)</p>
-                <p style="margin-left:20px;"><a href="./?PH_page_links&nm_page=$page_name">show links</a></p>
+            <div style="margin-bottom:30px;"><strong>Search Across Links</strong>
+                <p style="margin-left:20px;"><a href="./?PH_page_links&nm_page=$page_name">Search Across Links</a></p>
+            </div>
+
+            <div style="margin-bottom:30px;"><strong>Read-only aliases</strong>
+                <p style="margin-left:20px;">You can create read-only page aliases for this page</p>
+                <div style="margin-left:20px;">
+                    <form id="fr_read_only_aliases" method="post" action="./?">
+                        <input type="hidden" name="PH_page_opts" value="1">
+                        <input type="hidden" name="nm_page" value="$page_name">
+                        <input type="hidden" name="nm_level" value="very">
+                        read-only page aliases (comma seperated): <input type="text" name="nm_read_only_aliases" value="$read_only_aliases" style="width:200px;">
+                        <input type="submit" name="nm_submit" value="set aliases" class="form">
+                    </form>
+                </div>
             </div>
 
             <div style="margin-bottom:30px;">
@@ -2231,8 +2383,7 @@ sub get_fopts {
 return (
     has_linking => {
         level => 'more',
-        is_boolean => 1,
-        is_color => 0,
+        data_type => 'bool',
         yes_message =>
             "Any links to other pages will now be <strong>visible</strong>",
         no_message =>
@@ -2242,8 +2393,7 @@ return (
     },
     allows_incoming_links => {
         level => 'more',
-        is_boolean => 1,
-        is_color => 0,
+        data_type => 'bool',
         yes_message =>
             qq~
             Other pages may now link to this page.<br>
@@ -2257,8 +2407,7 @@ return (
     },
     show_encryption_buttons => {
         level => 'very',
-        is_boolean => 1,
-        is_color => 0,
+        data_type => 'bool',
         yes_message => "The encryption buttons are now <strong>shown</strong> on the page",
         no_message => "The encryption buttons are <strong>no longer</strong> shown on the page",
             no_link => "<strong>hide</strong> the encryption buttons",
@@ -2266,8 +2415,7 @@ return (
     },
     show_search_box => {
         level => 'more',
-        is_boolean => 1,
-        is_color => 0,
+        data_type => 'bool',
         yes_message => "The search box is now <strong>shown</strong> on the page",
         no_message => "The search box is <strong>no longer</strong> shown on the page",
             no_link => "<strong>hide</strong> the search box",
@@ -2275,8 +2423,7 @@ return (
     },
     has_no_text_wrap => {
         level => 'more',
-        is_boolean => 1,
-        is_color => 0,
+        data_type => 'bool',
         yes_message =>
             "The text is <strong>no longer</strong> wrapped at 80 characters",
         no_message =>
@@ -2286,8 +2433,7 @@ return (
     },
     hide_from_find => {
         level => 'more',
-        is_boolean => 1,
-        is_color => 0,
+        data_type => 'bool',
         yes_message =>
             "The page is <strong>no longer</strong> shown in the 'find a page' results",
         no_message =>
@@ -2297,8 +2443,7 @@ return (
     },
     use_creole => {
         level => 'more',
-        is_boolean => 1,
-        is_color => 0,
+        data_type => 'bool',
         yes_message =>
             "The text is now <strong>using</strong> the Creole markup language",
         no_message =>
@@ -2308,8 +2453,7 @@ return (
     },
     remove_branding => {
         level => 'very',
-        is_boolean => 1,
-        is_color => 0,
+        data_type => 'bool',
         yes_message =>
             "The branding has been <strong>removed</strong> from the page",
         no_message =>
@@ -2319,8 +2463,7 @@ return (
     },
     remove_create_new_link => {
         level => 'very',
-        is_boolean => 1,
-        is_color => 0,
+        data_type => 'bool',
         yes_message =>
             "The 'create new page' link has been <strong>removed</strong> from the page",
         no_message =>
@@ -2330,8 +2473,7 @@ return (
     },
     remove_container_div => {
         level => 'very',
-        is_boolean => 1,
-        is_color => 0,
+        data_type => 'bool',
         yes_message =>
             "The container div has been <strong>removed</strong> from the page",
         no_message =>
@@ -2341,10 +2483,15 @@ return (
     },
     bar_color_hex => {
         level => 'very',
-        is_boolean => 0,
-        is_color => 1,
+        data_type => 'color',
         set_message => "The bar's color was set.",
     },
+    read_only_aliases => {
+        level => 'very',
+        data_type => 'read_only_page_name_list',
+        set_message => "The read-only aliases were set.",
+    },
+            
 );
 }
 
@@ -2669,38 +2816,6 @@ sub get_filename_for_revision {
 
     my $filename = "$conf{CNF_TEXTS_DIR}/${page_name}_REVS/${page_name}_R$revision";
     return $filename;
-}
-
-sub _resolve_alias {
-    my $page_name = shift;
-
-    my $resolved_alias = _is_page_alias_for($page_name);
-    if ($resolved_alias){
-        return $resolved_alias;
-    }
-
-    return $page_name;
-}
-
-sub _is_page_alias_for {
-    my $page_name = shift;
-    
-    my $filename = "$conf{CNF_TEXTS_DIR}/$page_name";
-    my $alias_file = $filename . "_ALIAS";
-
-    if (-e $alias_file){
-        my $target_page_name = Potoss::File::read_file($alias_file);
-        chomp($target_page_name);
-        return $target_page_name;
-    }
-
-    my $deactivated_alias_file = $filename . "_ALIAS_DEACTIVATED";
-
-    if (-e $deactivated_alias_file){
-        throw("this alias has been deactivated");
-    }
-
-    return 0;
 }
 
 #sub _update_alias {

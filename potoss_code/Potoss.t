@@ -6,7 +6,8 @@
 use strict;
 use warnings;
 
-use Test::More tests => 50;
+use Test::More tests => 55 + 8 + 8 + 4 + 3;
+use Test::Exception;
 
 # Since you're in the testing mode, make any "throws" die with a lot of info.
 $ENV{POTOSS_THROW_DIES_WITH_MORE_INFO} = 1;
@@ -16,7 +17,96 @@ chdir("../");
 require Potoss;
 require Potoss::File;
 
+#-----------------------------------------------------------------------------
+#-----------------------------------------------------------------------------
+#-----------------------------------------------------------------------------
+#-----------------------------------------------------------------------------
+diag("aliases");
 
+is(Potoss::_page_is_an_alias("potoss_test_alias_a"), 0, "the page hasn't been created yet, so is not an alias");
+
+Potoss::_create_alias("potoss_test_link_tree_a_branch_a", "potoss_test_alias_a");
+ok(Potoss::_page_is_an_alias("potoss_test_alias_a"));
+is(Potoss::_resolve_alias("potoss_test_alias_a"), "potoss_test_link_tree_a_branch_a", "alias resolves ok");
+Potoss::_remove_alias("potoss_test_alias_a");
+is(Potoss::_page_is_an_alias("potoss_test_alias_a"), 0, "the alias was removed, so it is no longer an alias");
+
+throws_ok { Potoss::_remove_alias("potoss_test_alias_a"); } qr/is not an alias/, 'the alias page was already removed';
+
+#-----------------------------------------------------------------------------
+# Story: A user wants to add some aliases to a page that does not have any
+# already.
+is(Potoss::_page_is_an_alias("potoss_test_alias_list_a"), 0, "the page potoss_test_alias_list_a hasn't been created yet, so is not an alias");
+is(Potoss::_page_is_an_alias("potoss_test_alias_list_b"), 0, "the page potoss_test_alias_list_b hasn't been created yet, so is not an alias");
+Potoss::set_read_only_aliases_from_page_list("potoss_test_link_tree_a_branch_a", "potoss_test_alias_list_a, potoss_test_alias_list_b");
+ok(Potoss::_page_is_an_alias("potoss_test_alias_list_a"));
+ok(Potoss::_page_is_an_alias("potoss_test_alias_list_b"));
+is(Potoss::_resolve_alias("potoss_test_alias_list_a"), "potoss_test_link_tree_a_branch_a", "alias potoss_test_alias_list_a resolves ok");
+is(Potoss::_resolve_alias("potoss_test_alias_list_b"), "potoss_test_link_tree_a_branch_a", "alias potoss_test_alias_list_b resolves ok");
+Potoss::_remove_alias("potoss_test_alias_list_a");
+Potoss::_remove_alias("potoss_test_alias_list_b");
+is(Potoss::_page_is_an_alias("potoss_test_alias_list_a"), 0, "the page potoss_test_alias_list_a was removed, so it is no longer an alias");
+is(Potoss::_page_is_an_alias("potoss_test_alias_list_b"), 0, "the page potoss_test_alias_list_b was removed, so it is no longer an alias");
+# End Story
+#-----------------------------------------------------------------------------
+
+#-----------------------------------------------------------------------------
+# Story: A page already has some aliases attached to it, but the user wants to
+# update them with a new set of aliases.
+
+# First, create the aliases that are going to be provided in the
+# pre-existing list
+Potoss::_create_alias("potoss_test_link_tree_a_branch_a", "potoss_test_alias_3_c");
+Potoss::_create_alias("potoss_test_link_tree_a_branch_a", "potoss_test_alias_3_d");
+
+my $pre_existing_list = "potoss_test_alias_3_c, potoss_test_alias_3_d, potoss_test_alias_3_a";
+my $new_list = "potoss_test_alias_3_a, potoss_test_alias_3_b";
+Potoss::set_read_only_aliases_from_page_list("potoss_test_link_tree_a_branch_a", $new_list, $pre_existing_list);
+ok(Potoss::_page_is_an_alias("potoss_test_alias_3_a"));
+ok(Potoss::_page_is_an_alias("potoss_test_alias_3_b"));
+is(Potoss::_page_is_an_alias("potoss_test_alias_3_c"), 0);
+is(Potoss::_page_is_an_alias("potoss_test_alias_3_d"), 0);
+
+# Remove the aliases you created as part of the test
+Potoss::_remove_alias("potoss_test_alias_3_a");
+Potoss::_remove_alias("potoss_test_alias_3_b");
+
+# Make sure that all the aliases are actually gone.
+is(Potoss::_page_is_an_alias("potoss_test_alias_3_a"), 0);
+is(Potoss::_page_is_an_alias("potoss_test_alias_3_b"), 0);
+is(Potoss::_page_is_an_alias("potoss_test_alias_3_c"), 0);
+is(Potoss::_page_is_an_alias("potoss_test_alias_3_d"), 0);
+# End Story
+#-----------------------------------------------------------------------------
+
+
+#-----------------------------------------------------------------------------
+# Story: A user wants to remove all the pre-existing aliases from a page
+
+# First, create the aliases that are going to be provided in the
+# pre-existing list
+Potoss::_create_alias("potoss_test_link_tree_a_branch_a", "potoss_test_alias_4_a");
+Potoss::_create_alias("potoss_test_link_tree_a_branch_a", "potoss_test_alias_4_b");
+Potoss::set_read_only_aliases_from_page_list("potoss_test_link_tree_a_branch_a", "", "potoss_test_alias_4_a, potoss_test_alias_4_b");
+is(Potoss::_page_is_an_alias("potoss_test_alias_4_a"), 0);
+is(Potoss::_page_is_an_alias("potoss_test_alias_4_b"), 0);
+# End Story
+#-----------------------------------------------------------------------------
+
+# testing for edge cases
+throws_ok{ Potoss::set_read_only_aliases_from_page_list('Blah Blah', 'some_new_alias_that_will_not_happen'); } qr/does not exist/, 'The page that we wanted to make aliases to does not exist';
+
+my $too_many_aliases = 'potoss_test_new_alias_1,potoss_test_new_alias_2,potoss_test_new_alias_3,potoss_test_new_alias_4,potoss_test_new_alias_5,potoss_test_new_alias_6';
+throws_ok{ Potoss::set_read_only_aliases_from_page_list('potoss_test_link_tree_a_branch_a', $too_many_aliases); } qr/cannot create more than/, 'Tried to create too many aliases';
+
+throws_ok{ Potoss::set_read_only_aliases_from_page_list('potoss_test_link_tree_a_branch_a', 'potoss_test_new_alias_1,Hello there'); } qr/does not match the page naming criteria/, 'Tried to create an alias with a crazy name.';
+
+throws_ok{ Potoss::set_read_only_aliases_from_page_list('potoss_test_link_tree_a_branch_a', 'potoss_test_link_tree_a_branch_b'); } qr/is already a real page/, 'Tried to create an alias on top of a real page.';
+
+throws_ok{ Potoss::set_read_only_aliases_from_page_list('potoss_test_link_tree_a_branch_a', 'potoss_wow'); } qr/alias for another page/, 'That alias is already used by another page.';
+
+#-----------------------------------------------------------------------------
+#-----------------------------------------------------------------------------
 #-----------------------------------------------------------------------------
 #-----------------------------------------------------------------------------
 diag("utilities");
@@ -28,6 +118,9 @@ $result =~ /^([a-j]+)$/;
 is(length($1), 30, "only contains a-j characters");
 
 
+
+#-----------------------------------------------------------------------------
+#-----------------------------------------------------------------------------
 #-----------------------------------------------------------------------------
 #-----------------------------------------------------------------------------
 diag("exists");
@@ -38,6 +131,9 @@ is(Potoss::_page_exists("fla slwo wofhne sosna "), 0, "The page does not exist (
 is(Potoss::_page_exists('Hella &3#@9@!)@&#'), 0, "The page does not exist (with spaces and more junk)");
 ok(Potoss::_page_exists("potoss_test_link_tree_a_branch_a_leaf_b"), "The page exists - part 2");
 
+
+#-----------------------------------------------------------------------------
+#-----------------------------------------------------------------------------
 #-----------------------------------------------------------------------------
 #-----------------------------------------------------------------------------
 diag("linking");
@@ -195,6 +291,9 @@ sub link_names_only {
     return @links;
 }
 
+
+#-----------------------------------------------------------------------------
+#-----------------------------------------------------------------------------
 #-----------------------------------------------------------------------------
 #-----------------------------------------------------------------------------
 diag("page naming");
@@ -233,6 +332,9 @@ is(
     "the page name is ok"
 );
 
+
+#-----------------------------------------------------------------------------
+#-----------------------------------------------------------------------------
 #-----------------------------------------------------------------------------
 #-----------------------------------------------------------------------------
 diag("normalization of the page name");
@@ -259,6 +361,9 @@ Potoss::_write_new_page_revision( $page_name, "some text" );
 is( Potoss::_test_num_pages(qr{$page_name}),
     1, "One page matches rand string" );
 
+
+#-----------------------------------------------------------------------------
+#-----------------------------------------------------------------------------
 #-----------------------------------------------------------------------------
 #-----------------------------------------------------------------------------
 diag("file options (fopts)");
@@ -293,6 +398,9 @@ is( Potoss::_test_num_pages(qr{$page_name}),
 Potoss::_tgz_pages("tar_potoss_single_page", "potoss_saved_test");
 Potoss::_tgz_pages("tar_potoss_multiple_pages", qw(potoss_test_link_tree_a_branch_a potoss_test_link_tree_a_branch_b potoss_test_link_tree_a_branch_c));
 
+
+#-----------------------------------------------------------------------------
+#-----------------------------------------------------------------------------
 #-----------------------------------------------------------------------------
 #-----------------------------------------------------------------------------
 diag("page name guesses");
