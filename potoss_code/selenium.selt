@@ -257,6 +257,55 @@ sub get_tests {
 },
 
 {
+    name => "tst_create_new_page_from_readonly_alias",
+    numtests => 8, solo => 0, should_run => 1, is_last_test => 0,
+    code => sub {
+        #-------------------------------------------------------------------------
+        # Story:
+        # A user is on a read-only alias page and clicks on the "create a new
+        # page" link.  They shouldn't see an option to create a related
+        # page... it should only show the option to create a totally unrelated
+        # page.
+        #-------------------------------------------------------------------------
+
+        $sel->open_ok("${dir}potoss_wow"); #read only alias for potoss_saved_test
+        my_loads_ok();
+        $sel->is_text_present_ok("read only");
+        $sel->is_text_present_ok("this is change 11");
+
+        $sel->is_text_present_ok("create a new page");
+        $sel->click_ok("link=create a new page");
+        my_loads_ok();
+
+        ok(! $sel->is_text_present("Show the advanced page creation options"), "Advanced options should not show");
+
+    },
+},
+
+{
+    name => "tst_create_link_to_readonly_alias",
+    numtests => 6, solo => 0, should_run => 1, is_last_test => 0,
+    code => sub {
+        #-------------------------------------------------------------------------
+        # Story:
+        # [tag:security:gem]
+        # A user is being naughty and is trying to link a new page to a
+        # read-only alias.  They're being naughty because this isn't exposed
+        # anywhere as a link... they're playing with the URL.
+        #-------------------------------------------------------------------------
+
+        $sel->open_ok("${dir}PH_create&nm_relate_to_page=potoss_wow"); #read only alias for potoss_saved_test
+
+        $sel->is_text_present_ok("like the page name");
+        $sel->type_ok("nm_page", "potoss_new_naughty_page");
+        $sel->click_ok("nm_submit");
+        my_loads_ok();
+        $sel->is_text_present_ok("you cannot relate a new page to a read-only alias page");
+
+    },
+},
+
+{
     name => "tst_add_remove_search_box",
     numtests => 25, solo => 0, should_run => 1, is_last_test => 0,
     code => sub {
@@ -1043,7 +1092,7 @@ sub my_loads_ok {
 
     # gemnote even with this set to a short interval, selenium still "sticks"
     # on some pages for a _long_ time.
-    my $length_in_milliseconds = 5000;
+    my $length_in_milliseconds = 50_000;
     $sel->wait_for_page_to_load_ok("$length_in_milliseconds", "page loads in less than $length_in_milliseconds");
 }
 

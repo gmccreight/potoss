@@ -320,16 +320,17 @@ sub PH_create_from_page {
                 <a href="./?PH_create&nm_relate_to_page=$page_name&nm_linking_is_one_way=1" style="margin-left:20px;">don't add searchbox</a>
             </p>
             <p style="margin-left:20px;">A link will be added from the pre-existing page to the new page, but <strong><em>not</em></strong> from the new page back to the pre-existing page.</p>
-            <p style="margin-left:20px;">If you choose to also add the search box to the pre-existing page, it will be added to the top of the pre-existing page.</p>
+            <p style="margin-left:20px;">If you choose to also add the search box, it will be added to the top of the pre-existing page, but not the newly created page.  It will let you search both pages from the pre-existing page.</p>
             <p style="margin-left:20px;"><span style="color:red;">Note:</span> If you got all fancy and already added a link pointing to the new page you are about to create, good for you!  We won't add another one.</p>
         ~;
     }
     else {
-        $more_opts = qq~
-            <p style="margin-top:30px;"><a href="./?PH_create_from_page&nm_page=$page_name&nm_show_more_options=1">Show the advanced page creation options</a></p>
-        ~;
+        if ( ! _page_is_an_alias($page_name) ) {
+            $more_opts = qq~
+                <p style="margin-top:30px;"><a href="./?PH_create_from_page&nm_page=$page_name&nm_show_more_options=1">Show the advanced page creation options</a></p>
+            ~;
+        }
     }
-
 
     my $body = qq~
         <p style="margin-top:20px;">Create:</p>
@@ -410,9 +411,10 @@ sub PH_create_submit {
         if (! _page_exists($relate_to_page) ) {
             throw("the page to relate to, $relate_to_page, does not exist");
         }
-    }
-
-    
+        if ( _page_is_an_alias($relate_to_page) ) {
+            throw("you cannot relate a new page to a read-only alias page, $relate_to_page");
+        }
+    }    
 
     if ($relate_to_page) {
 
