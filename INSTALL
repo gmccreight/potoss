@@ -1,24 +1,36 @@
 ---
-Installing POTOSS (The source of pageoftext.com)
+Installing potoss (The source of pageoftext.com)
 ---
 
-For the moment, once you unpack the tarball, try running:
+For the moment, once you clone from github, try running:
 perl ./index.cgi
-It will undoubtedly fail with some messages about missing Perl modules.
-You'll need to use the cpan shell to install a couple modules.  To do this,
-type:
-sudo cpan
-Once the cpan program is up and running, you can install the needed modules.
+It will likely succeed.
 
-Once the modules are installed, you should be able to set up Apache to
-launch the perl script.  See the PotConf.pm file in the potoss_code folder
-for an example of a working Apache configuration.
+Next, try cd'ing to potoss_code and run:
+perl ./run_test_web_server.pl
+
+The site should work fine, except for the RSS feeds.  They will fail if you
+don't have the perl DateTime module installed.
+
+To install the DateTime module on Ubuntu,
+run the following command:
+sudo aptitude install libdatetime-perl
+
+If you're on another system, you can use the cpan shell to
+the DateTime module.  To do this, type:
+sudo cpan
+Once the cpan program is up and running, you can install the module.
+
+Once the module is installed, you should be able to set up Apache to
+launch the perl script (better than relying on the test web server).
+See the PotConf.pm file in the potoss_code folder for an example of a
+working Apache configuration.
 
 Before starting to add data to your installation, you should go into the
 potoss_code directory and run:
 perl Potoss.t
 which will run a suite of tests on your installation to make sure that
 various things work.
-
-In the future, the plans are to include all the modules needed to make the
-potoss code run out of the box.  We're not there yet.
+If it fails because it doesn't have Test::Exception, then you'll need to install
+it.  You can install it in Ubuntu by typing:
+sudo aptitude install libtest-exception-perl

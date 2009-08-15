@@ -1,3 +1,10 @@
+version 20090815_1
+Transfered the code to github.  When I checked it out onto a new
+computer, I realized there was a folder missing, so I added it and
+placed a .gitignore file in the folder so that the folder would be
+tracked by git.
+Updated the information about how to install potoss.
+
 version 20090814_1
 Fixed an issue which could have allowed people to accidentally change
 the contents of read-only aliases page when creating new pages that
