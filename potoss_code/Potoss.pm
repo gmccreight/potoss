@@ -1821,7 +1821,7 @@ sub PH_edit {
 
                 <p>By continuing <strong>you are agreeing</strong> that it is
                 not the end of the world if $conf{CNF_ADMIN_HE_OR_SHE} see the contents of this page.</p>
-                            
+
                 <p>Also, it is possible that someone will guess your URL, in which case they
                 may <strong>read your page</strong>.  In other words, <strong>don't put anything
                 too sensitive up here</strong>.</p>
@@ -1872,6 +1872,10 @@ sub PH_edit {
         ? qq~onclick="only_submit_if_textarea_encrypted();"~
         : qq~onclick="document.getElementById('fr_edit_page').submit();"~;
 
+    my $recaptcha = (page_fopt($page_name, 'exists', "use_recaptcha"))
+        ? _recaptcha_fields()
+        : "";
+
     my $body = qq~
         $revision_alert
         $first_edit_alert
@@ -1887,8 +1891,9 @@ sub PH_edit {
             <input type="hidden" name="nm_head_revision_number_at_edit_start" value="$head_revision_number">
 
             <textarea id="myel_text_area" name="nm_text" cols="$textarea_cols" rows="$textarea_rows" style="font-size:12px;">$text</textarea>
-            
+
             <div>
+                $recaptcha
                 <input type="button" name="nm_submit" value="save" class="form" $onclick_javascript_verify_encrypted style="margin-right:10px;">
                 <!--<input type="button" value="test" class="form" $onclick_javascript_verify_encrypted style="margin-right:10px;">-->
                 <input type="button" value="cancel" class="form" onclick="document.location = '$cancel_url';">
@@ -1909,6 +1914,53 @@ sub PH_edit {
     );
 }
 
+sub _validate_recaptcha_or_throw {
+    require Captcha::reCAPTCHA;
+    my $c = Captcha::reCAPTCHA->new;
+
+    $ENV{'REMOTE_ADDR'} = "www.pageoftext.com";
+
+    my $challenge = $cgi->param("recaptcha_challenge_field");
+    my $response = $cgi->param("recaptcha_response_field");
+
+    # Verify submission
+    my $result = $c->check_answer(
+        $conf{"CNF_RECAPTCHA_PRIVATE_KEY"}, $ENV{'REMOTE_ADDR'},
+        $challenge, $response
+    );
+
+    if ( ! $result->{is_valid} ) {
+        # reCAPTCHA gave an error
+
+        my $error = $result->{error};
+        if ($error =~ /incorrect-captcha-sol/) {
+            throw "The words you typed into the reCAPTCHA field weren't right.  Hit the back button and try again."
+        }
+        else {
+            throw "reCAPTCHA gave an error: " . $error;
+        }
+    }
+
+}
+
+sub _recaptcha_fields {
+    my $recaptcha = qq~
+        <script type="text/javascript"
+           src="http://api.recaptcha.net/challenge?k=$conf{CNF_RECAPTCHA_PUBLIC_KEY}">
+        </script>
+
+        <noscript>
+           <iframe src="http://api.recaptcha.net/noscript?k=$conf{CNF_RECAPTCHA_PUBLIC_KEY}>"
+               height="300" width="500" frameborder="0"></iframe><br>
+           <textarea name="recaptcha_challenge_field" rows="3" cols="40">
+           </textarea>
+           <input type="hidden" name="recaptcha_response_field"
+               value="manual_challenge">
+        </noscript>
+    ~;
+    return $recaptcha;
+}
+
 sub _fopts_params {
     my $page_name = shift;
     my $message = "";
@@ -1920,6 +1972,11 @@ sub _fopts_params {
         if (defined $param){
             if ($fopts{$fopt_name}->{data_type} eq 'bool') {
                 my $action = ($param eq 'yes') ? 'create' : 'remove';
+
+                if ($fopt_name eq 'use_recaptcha') {
+                    _validate_recaptcha_or_throw();
+                }
+
                 page_fopt($page_name, $action, $fopt_name);
                 $message = $fopts{$fopt_name}->{"${param}_message"};
 
@@ -2191,6 +2248,25 @@ sub PH_page_opts {
         </div>
     ~;
 
+    # [tag:hacker:gem] You should not be able to turn on, or turn off
+    # recaptcha without actually filling in a recaptcha by hand, since otherwise
+    # hackers would just turn off the recaptcha automatically.
+
+    # [tag:feature:gem] however, in the future it would be nice to give the site
+    # owner a little bit of leverage to turn reCAPTCHA on easily if they know a
+    # secret key.  That way they wouldn't have to fight with spammers by hand.
+
+    # [tag:smell:gem] could be cleaned up just a bit given the time...
+    my $recaptcha_action = (page_fopt($page_name, 'exists', "use_recaptcha"))
+        ? 'disable'
+        : 'enable';
+
+    my $recaptcha_bool = (page_fopt($page_name, 'exists', "use_recaptcha"))
+        ? 'no'
+        : 'yes';
+
+    my $recaptcha_fields = _recaptcha_fields();
+
     $text_for_level{more} = qq~
             <div style="margin-bottom:30px;"><strong>RSS feed</strong>
                 <p style="margin-left:20px;margin-bottom:20px;"><a href="./?PH_choose_rss&nm_pages=$page_name">RSS feed of this page</a></p>
@@ -2209,7 +2285,7 @@ sub PH_page_opts {
                 <p style="margin-left:20px;">Add a search box to the top of the page.  If you have links to other pages, you will be able to search the other pages using the search box.</p>
                 <p style="margin-left:20px;">$fopt_link_for{"show_search_box"}</p>
             </div>
-            
+
             <div style="margin-bottom:30px;">
                 <strong>Hide from find results</strong>
                 <p style="margin-left:20px;">Hide the page from the 'find a page' search results.</p>
@@ -2219,6 +2295,20 @@ sub PH_page_opts {
 
             <div style="margin-bottom:30px;"><strong>Creole</strong>
                 <p style="margin-left:20px;">$fopt_link_for{"use_creole"}</p>
+            </div>
+
+            <div style="margin-bottom:30px;"><strong>reCAPTCHA</strong>
+                <p>
+                    To $recaptcha_action reCAPTCHA on this page, you need to fill in the following reCAPTCHA:
+                </p>
+                <form id="fr_use_recaptcha" method="post" action="./?">
+                    <input type="hidden" name="PH_page_opts" value="1">
+                    <input type="hidden" name="nm_page" value="$page_name">
+                    <input type="hidden" name="nm_level" value="more">
+                    <input type="hidden" name="nm_use_recaptcha" value="$recaptcha_bool">
+                    $recaptcha_fields
+                    <input type="submit" name="nm_submit" value="$recaptcha_action reCAPTCHA" class="form">
+                </form>
             </div>
 
             <div style="margin-bottom:30px;"><strong>Notes about doing things faster</strong>
@@ -2443,6 +2533,16 @@ return (
             no_link => "<strong>show</strong> the page from the 'find a page' results",
             yes_link => "<strong>hide</strong> the page in the 'find a page' results",
     },
+    use_recaptcha => {
+        level => 'more',
+        data_type => 'bool',
+        yes_message =>
+            "The text is now <strong>using</strong> reCAPTCHA",
+        no_message =>
+            "The text is now <strong>not</strong> using reCAPTCHA",
+            no_link => "do <strong>not</strong> use reCAPTCHA",
+            yes_link => "<strong>use</strong> reCAPTCHA",
+    },
     use_creole => {
         level => 'more',
         data_type => 'bool',
@@ -2493,7 +2593,7 @@ return (
         data_type => 'read_only_page_name_list',
         set_message => "The read-only aliases were set.",
     },
-            
+
 );
 }
 
@@ -2635,6 +2735,7 @@ sub PH_page_revisions {
     hprint($body, { page_name => $page_name, sub_page_name => "revisions" });
 }
 
+
 sub PH_page_submit {
     my $page_name = $cgi->param("nm_page");
     my $text = $cgi->param("nm_text");
@@ -2643,6 +2744,10 @@ sub PH_page_submit {
     my $skip_revision_num_check = $cgi->param('nm_skip_revision_num_check') || 0; #aka ignore or bypass
 
     my $no_opts_str = ($no_opts) ? "&nm_no_opts=1" : '';
+
+    if (page_fopt($page_name, 'exists', "use_recaptcha")) {
+        _validate_recaptcha_or_throw();
+    }
 
     if (! $skip_revision_num_check ) {
         if (get_page_HEAD_revision_number($page_name, 'cached') != $head_revision_number_at_edit_start) {
