@@ -1918,8 +1918,6 @@ sub _validate_recaptcha_or_throw {
     require Captcha::reCAPTCHA;
     my $c = Captcha::reCAPTCHA->new;
 
-    $ENV{'REMOTE_ADDR'} = "www.pageoftext.com";
-
     my $challenge = $cgi->param("recaptcha_challenge_field");
     my $response = $cgi->param("recaptcha_response_field");
 
