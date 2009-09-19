@@ -1444,7 +1444,11 @@ sub _slow_down_if_more_guesses_than {
     # server's ability to serve more requests?
     my $was_slowed_down = 0;
     if ($num_guesses > $slow_after_how_many_guesses) {
-        sleep 2 * ($num_guesses - $slow_after_how_many_guesses);
+        # [tag:testing:gem]
+        # Don't actually slow things down if you're testing locally
+        if ($ip_address_of_guess ne "127_0_0_1") {
+            sleep 2 * ($num_guesses - $slow_after_how_many_guesses);
+        }
         $was_slowed_down = 1;
     }
 
