@@ -1,3 +1,9 @@
+version 20090918_1
+Added support for reCAPTCHA because of problems with automated
+spam on some pages.  By default the reCAPTCHA is not enabled.  To
+enable it you have to fill one in, and to disable it you have to
+fill one in.
+
 version 20090815_1
 Transfered the code to github.  When I checked it out onto a new
 computer, I realized there was a folder missing, so I added it and
