@@ -3000,7 +3000,9 @@ sub get_page_HEAD_revision_number {
     if ($real_or_cached eq 'cached') {
         my $file = "$conf{CNF_TEXTS_DIR}/${page_name}_HREV";
         if (-e $file) {
-            return Potoss::File::read_file("$conf{CNF_TEXTS_DIR}/${page_name}_HREV");
+            my $revision = Potoss::File::read_file("$conf{CNF_TEXTS_DIR}/${page_name}_HREV");
+            chomp($revision);
+            return $revision;
         }
         else {
             return -1;
