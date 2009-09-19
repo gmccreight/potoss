@@ -118,13 +118,26 @@ if ( scalar(@truncated_tests_to_run) != scalar(@all_tests) ) {
     warn "Just a note: Not running all the tests.  Either some have been solo'd, some have should_run set to zero, or is_last_test is set on one."
 }
 
+sub do_data_cleanup {
+    # First, remove any untracked files
+    `git clean -d -f -q potoss_data`;
+    # Then, revert the changes to tracked files
+    `git checkout potoss_data`;
+}
+
+my $is_first_test = 1;
 BROWSER:
 for my $browser (@browsers_to_test) {
     start_selenium_browser($browser);
     for my $test_ref (@truncated_tests_to_run) {
+        # Only clean up at the beginning for the first test run.
+        # After that, clean up at the end of each test.
+        do_data_cleanup() if $is_first_test;
+        $is_first_test = 0;
         diag("starting test: $test_ref->{name}");
         $test_ref->{code}->();
         diag("ending test: $test_ref->{name}");
+        do_data_cleanup();
     }
     stop_selenium_browser();
 }
@@ -875,8 +888,6 @@ sub get_tests {
         $sel->is_text_present_ok("link to potoss_tmp_link_page_2");
         $sel->click_ok("link=potoss_tmp_link_page_2");
         my_loads_ok();
-
-        delete_potoss_tmp_link_pages();
     },
 },
 
@@ -934,8 +945,6 @@ sub get_tests {
         $sel->is_text_present_ok("potoss_tmp_link_page_2");
         $sel->click_ok("link=potoss_tmp_link_page_2");
         my_loads_ok();
-
-        delete_potoss_tmp_link_pages();
     },
 },
 
@@ -977,8 +986,6 @@ sub get_tests {
         $sel->is_text_present_ok("link to potoss_tmp_link_page_2");
         $sel->click_ok("link=potoss_tmp_link_page_2");
         my_loads_ok();
-
-        delete_potoss_tmp_link_pages();
     },
 },
 
@@ -1039,16 +1046,10 @@ sub get_tests {
         $sel->is_text_present_ok("potoss_tmp_link_page_2");
         $sel->click_ok("link=potoss_tmp_link_page_2");
         my_loads_ok();
-
-        delete_potoss_tmp_link_pages();
     },
 },
 )  #end of tests array
 }  #end of get_tests subroutine
-
-sub delete_potoss_tmp_link_pages {
-    `cd $texts_dir ; rm -r potoss_tmp_link_page_1_REVS ; rm -r potoss_tmp_link_page_2_REVS ; rm potoss_tmp_link_page_*`;
-}
 
 sub my_loads_ok {
     # this is called so often that I made it a subroutine
