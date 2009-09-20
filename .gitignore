@@ -2,3 +2,4 @@ potoss_code/selenium/potoss_lastrun_stderr.log
 potoss_code/selenium/potoss_lastrun_stdout.log
 *.swp
 tar_potoss_test*
+potoss_code/PotConfLocal.pm

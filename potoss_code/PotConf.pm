@@ -54,8 +54,15 @@ $conf{CNF_ADMIN_EMAIL} = 'setme@example.com';
 $conf{CNF_HTTP_SERVER_PORT} = 4782;
 
 # Both of these look real, but they are just examples... you need to put your real ones in.
-$conf{CNF_RECAPTCHA_PUBLIC_KEY} = "6Le1RsnnnNdX-D7789tCDJ";
-$conf{CNF_RECAPTCHA_PRIVATE_KEY} = "6Le6PzA3jdwjdjsjsnO9090iBp";
+$conf{CNF_RECAPTCHA_PUBLIC_KEY} = "FakeDefaultValue";
+$conf{CNF_RECAPTCHA_PRIVATE_KEY} = "FakeDefaultValue";
+
+# Normally you need to fill in a reCAPTCHA just to turn reCAPTCHA on for a
+# page.  If you're the site's administrator, that could be a bit of a pain,
+# particularly if you're fighting a determined spammer.  Here we specify a code
+# that allows the site admin (who knows the code) to turn reCAPTCHA on in an
+# automated way.
+$conf{CNF_RECAPTCHA_TURN_ON_CODE} = "jdwjd5";
 
 # If you want the URL to be super easy, like www.potosssite.com/page_name
 # then you'll need to set up mod_rewrite in Apache.  Once you've done that
@@ -64,6 +71,26 @@ $conf{CNF_RECAPTCHA_PRIVATE_KEY} = "6Le6PzA3jdwjdjsjsnO9090iBp";
 # configuration below, which includes the "Rewrite" section.
 $conf{CNF_SHOULD_STRIP_QUESTION_MARKS} = 0;
 
+# If there is a Local file, any settings it contains supercede the settings in this file.
+# We use the Local file to store our *real* RECAPTCHA configuration variables, since we
+# don't want to share them as part of the open source code.
+# Here is an example of what you might put in the local file:
+# <SNIP>
+# package PotConfLocal;
+#
+# use strict;
+# use warnings;
+#
+# $PotConf::conf{CNF_RECAPTCHA_PUBLIC_KEY} =  "AAAG912dX-DEstCDJGPq";
+# $PotConf::conf{CNF_RECAPTCHA_PRIVATE_KEY} = "AAAClTn-reAy6JMOiBpf";
+#
+# 1;
+# </SNIP>
+
+if (-e "./potoss_code/PotConfLocal.pm") {
+    require PotConfLocal;
+}
+
 #<VirtualHost *:80>
 #    DocumentRoot /var/potosssite
 #    ServerAdmin setme@example.com
@@ -71,12 +98,12 @@ $conf{CNF_SHOULD_STRIP_QUESTION_MARKS} = 0;
 #    ServerAlias potosssite.com *.potosssite.com
 #    ErrorLog /var/log/apache2/potosssite.com-error_log
 #    CustomLog /var/log/apache2/potosssite.com-access_log common
-#   
+
 #    <Directory /var/potosssite>
-#    
+
 #       RewriteEngine on
 #       RewriteRule ^([A-Za-z_0-9&=\\:-]+)$ index.cgi?$1
-#        
+#
 #	    <FilesMatch "\.cgi$">
 #            Options +ExecCGI
 #            SetHandler cgi-script
@@ -87,9 +114,9 @@ $conf{CNF_SHOULD_STRIP_QUESTION_MARKS} = 0;
 #       Options FollowSymLinks
 #	    Order allow,deny
 #	    Allow from all
-#    
+#
 #    </Directory>
-#    
+#
 #</VirtualHost>
 
 #### Config File Validation
