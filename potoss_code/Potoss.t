@@ -395,8 +395,8 @@ is( Potoss::_test_num_fopts(qr{$page_name}),
 is( Potoss::_test_num_pages(qr{$page_name}),
     0, "No pages match rand string - part 2" );
 
-Potoss::_tgz_pages("tar_potoss_single_page", "potoss_saved_test");
-Potoss::_tgz_pages("tar_potoss_multiple_pages", qw(potoss_test_link_tree_a_branch_a potoss_test_link_tree_a_branch_b potoss_test_link_tree_a_branch_c));
+Potoss::_tgz_pages("tar_potoss_test_single_page", "potoss_saved_test");
+Potoss::_tgz_pages("tar_potoss_test_multiple_pages", qw(potoss_test_link_tree_a_branch_a potoss_test_link_tree_a_branch_b potoss_test_link_tree_a_branch_c));
 
 
 #-----------------------------------------------------------------------------

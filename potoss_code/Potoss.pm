@@ -2401,7 +2401,7 @@ sub PH_page_opts {
                 <p style="margin-left:20px;">All of the code which runs this site is free and open source software.  The bulk is licensed under the GPLv2.  Some of the modules are licensed under the UGPL or the more permissive Artistic license.</p>
                 <p style="margin-left:20px;">The code will only work on UNIX type platforms.</p>
                 <p style="margin-left:20px;">I also include the Selenium browser tests for the site.</p>
-                <p style="margin-left:40px;">It is hosted at: <a href="http://code.google.com/p/potoss/">http://code.google.com/p/potoss/</a></p>
+                <p style="margin-left:40px;">It is hosted at: <a href="http://github.com/gmccreight/potoss">http://github.com/gmccreight/potoss</a></p>
                 <p style="margin-left:40px;">There is also a pageoftext page about the project, <a href="http://www.pageoftext.com/potoss">www.pageoftext.com/potoss</a></p>
             </div>
         </div>

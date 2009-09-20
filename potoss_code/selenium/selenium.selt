@@ -94,6 +94,17 @@ my $sel = undef;
 my $test_dir = $ENV{POT_TEST_SERVER}
     || die "needs POT_TEST_SERVER environmental variable set";
 
+
+if ($test_dir eq "http_simple") {
+    my $child_pid = undef;
+
+    unless ( $child_pid = fork() ) {
+        exec("cd potoss_code; perl run_test_web_server.pl");
+        exit 0;
+    }
+}
+
+
 my %test_for = (
     potoss_dev => {
         url   => 'localhost',
@@ -125,20 +136,27 @@ sub do_data_cleanup {
     `git checkout potoss_data`;
 }
 
-my $is_first_test = 1;
 BROWSER:
 for my $browser (@browsers_to_test) {
+
     start_selenium_browser($browser);
+
+    do_data_cleanup();
+
     for my $test_ref (@truncated_tests_to_run) {
         # Only clean up at the beginning for the first test run.
         # After that, clean up at the end of each test.
-        do_data_cleanup() if $is_first_test;
-        $is_first_test = 0;
         diag("starting test: $test_ref->{name}");
         $test_ref->{code}->();
         diag("ending test: $test_ref->{name}");
         do_data_cleanup();
     }
+
+    if ($ENV{POT_TEST_SERVER} eq "http_simple") {
+        #kill the server by sending it a special command
+        $sel->open( $dir . "kill_server");
+    }
+
     stop_selenium_browser();
 }
 
@@ -171,13 +189,12 @@ sub stop_selenium_browser {
 # gemhack 4 - it doesn't appear to work on this Linux setup, so commenting
 # out for now.
 if (! $ENV{POT_SELENIUM_SERVER_SHUTDOWN_EXTERNALLY} ) {
-    #$sel && $sel->do_command("shutDown");
+    $sel && $sel->do_command("shutDownSeleniumServer");
 }
 
 
 sub get_tests {
     return (
-
 {
     name => "tst_add_and_remove_a_readonly_alias",
     numtests => 29, solo => 0, should_run => 1, is_last_test => 0,
