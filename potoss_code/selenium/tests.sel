@@ -80,9 +80,13 @@ plan( tests => $NUM_TESTS_PER_BROWSER * scalar(@browsers_to_test) );
 # send both STDOUT and STDERR to files so no 'clutter' messages appear
 # in the console, but you're able to see what happened, if necessary.
 if (! $ENV{POT_SELENIUM_SERVER_STARTED_EXTERNALLY} ) {
+    # [tag:hack:gem] eventually we shouldn't need this... it's just because
+    # Firefox 3.5 on Ubuntu is acting a bit funny at the moment If you have a
+    # selenium-firefox folder, it will use the firefox inside the folder
+    # instead of the normal default firefox.
     system qq~
         cd "$SELENIUM_SERVER_DIR" ;
-        java -jar selenium-server.jar > ./potoss_lastrun_stdout.log 2> ./potoss_lastrun_stderr.log &
+        java -DfirefoxDefaultPath="/usr/bin/selenium-firefox" -jar selenium-server.jar > ./potoss_lastrun_stdout.log 2> ./potoss_lastrun_stderr.log &
     ~;
 }
 
