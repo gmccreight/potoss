@@ -2252,13 +2252,14 @@ sub PH_page_opts {
         </div>
     ~;
 
-    # [tag:hacker:gem] You should not be able to turn on, or turn off
-    # recaptcha without actually filling in a recaptcha by hand, since otherwise
-    # hackers would just turn off the recaptcha automatically.
+    # [tag:spam:gem] [tag:hacker:gem] You should not be able to turn on, or
+    # turn off recaptcha without actually filling in a recaptcha by hand, since
+    # otherwise hackers would just turn off the recaptcha automatically.
 
     # [tag:feature:gem] however, in the future it would be nice to give the site
     # owner a little bit of leverage to turn reCAPTCHA on easily if they know a
     # secret key.  That way they wouldn't have to fight with spammers by hand.
+    # Alternatively, it could also be an IP address whitelist.
 
     # [tag:smell:gem] could be cleaned up just a bit given the time...
     my $recaptcha_action = (page_fopt($page_name, 'exists', "use_recaptcha"))

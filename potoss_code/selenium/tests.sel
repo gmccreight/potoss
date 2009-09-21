@@ -281,6 +281,35 @@ sub get_tests {
 },
 
 {
+    name => "tst_recaptcha_failure",
+    numtests => 9, solo => 0, should_run => 1, is_last_test => 0,
+    code => sub {
+        #-------------------------------------------------------------------------
+        # Story:
+        # [tag:spam:gem]
+        # A user goes to a page that has reCAPTCHA enabled, hits edit, then
+        # tries to submit the page without filling in the right recapatcha
+        # values.  A user might try to do this if they're using an automated tool
+        # to create spam on the site.
+        #-------------------------------------------------------------------------
+
+        $sel->open_ok("${dir}potoss_test_recaptcha");
+
+        $sel->is_text_present_ok("edit this page");
+        $sel->click_ok("link=edit this page");
+        my_loads_ok();
+
+        $sel->type_ok("myel_text_area", "[potoss_tmp_link_page_2]");
+        $sel->type_ok("recaptcha_response_field", "bad1 bad2");
+        $sel->click_ok("nm_submit");
+        my_loads_ok();
+
+        $sel->is_text_present_ok("The words you typed into the reCAPTCHA field weren't right");
+
+    },
+},
+
+{
     name => "tst_create_link_to_readonly_alias",
     numtests => 6, solo => 0, should_run => 1, is_last_test => 0,
     code => sub {

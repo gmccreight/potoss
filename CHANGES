@@ -1,3 +1,7 @@
+version 20090921_1
+Finished adding support for reCAPTCHA by adding a test.  It is
+pretty hard to test automatically, so I just test a failure case.
+
 version 20090918_1
 Added support for reCAPTCHA because of problems with automated
 spam on some pages.  By default the reCAPTCHA is not enabled.  To
