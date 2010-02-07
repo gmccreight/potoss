@@ -1,19 +1,33 @@
-# run this file from within Cygwin (or on a 'real' Unix) using the
+# Run this file from within Cygwin (or on a 'real' Unix) using the
 # prove command line tool.  "prove" is a script, and is part of
 # the Test::Harness perl module.
 
 # You can use an alias to ease running this test
-# alias pd='export POT_TEST_SERVER=http_simple ; prove ./potoss_code/selenium/selenium.selt'
+# alias pd='export POT_TEST_SERVER=http_simple ; prove ./potoss_code/selenium/tests.sel'
 
-# Here's a good command line for testing if you're running the server yourself
-# and don't want this script to startup or shutdown the server.
-# export POT_TEST_SERVER=http_simple ; export POT_SELENIUM_SERVER_STARTED_EXTERNALLY=1; export POT_SELENIUM_SERVER_SHUTDOWN_EXTERNALLY=1; export POT_BE_VERBOSE=1; prove ./potoss_code/selenium/selenium.selt
+# Here's a good command line for testing if you're running the Selenium server
+# yourself and don't want this script to startup or shutdown the Selenium
+# server.
+# export POT_TEST_SERVER=http_simple ; export POT_SELENIUM_SERVER_STARTED_EXTERNALLY=1; export POT_SELENIUM_SERVER_SHUTDOWN_EXTERNALLY=1; export POT_BE_VERBOSE=1; prove ./potoss_code/selenium/tests.sel
+
+# Here's another one where you skip most of the tests, but run different tests
+# each time.  It's basically like running a small, random assortment of tests
+# (like you might do as a sanity check while developing)
+# export POT_TEST_SERVER=http_simple ; export POT_SKIP_NUM_TESTS_IN_TEN=7; prove ./potoss_code/selenium/tests.sel
+
+# You could combine the two into something really fast.  It won't start up the
+# Selenium server, and it will only run a really small number of tests (If you
+# need to force a particular test to be included, look for the
+# "force_include_when_skipping" option within the test):
+# export POT_TEST_SERVER=http_simple ; export POT_SKIP_NUM_TESTS_IN_TEN=7; export POT_SELENIUM_SERVER_STARTED_EXTERNALLY=1; export POT_SELENIUM_SERVER_SHUTDOWN_EXTERNALLY=1; export POT_BE_VERBOSE=1; prove ./potoss_code/selenium/tests.sel
 
 use strict;
 use warnings;
 
 use Test::More;
 use Test::WWW::Selenium;
+
+#--- Start configuration
 
 my $SELENIUM_SERVER_DIR = "./potoss_code/selenium";
 my $POTOSS_DIR = ".";
@@ -24,6 +38,41 @@ my @BROWSERS = (
     { name => 'opera', should_test => 0 }, # works, but gives a little popup error.
     #gemhack 2 would like to add safari
 );
+
+
+sub get_env {
+    my $env_key = shift;
+
+    my @allowed_keys = qw(
+        POT_TEST_SERVER
+        POT_BE_VERBOSE
+
+        POT_SELENIUM_HOST
+        POT_SELENIUM_PORT
+
+        POT_SELENIUM_SERVER_STARTED_EXTERNALLY
+        POT_SELENIUM_SERVER_SHUTDOWN_EXTERNALLY
+
+        POT_RANDOMIZE
+        POT_SKIP_NUM_TESTS_IN_TEN
+    );
+
+    die "$env_key is not an ENV variable we use" if ! grep({$_ eq $env_key} @allowed_keys);
+
+    return $ENV{$env_key};
+}
+
+#--- End configuration
+
+sub fisher_yates_shuffle {
+    my $array = shift;
+    my $i;
+    for ($i = @$array; --$i; ) {
+        my $j = int rand ($i+1);
+        next if $i == $j;
+        @$array[$i,$j] = @$array[$j,$i];
+    }
+}
 
 my @all_tests = get_tests();
 
@@ -45,6 +94,36 @@ if (scalar(@last_tests) > 1) {
 my @tests_to_run = (@solo_tests)
     ? @solo_tests
     : grep({$_->{should_run} == 1} @all_tests);
+
+if (get_env("POT_RANDOMIZE")) {
+    fisher_yates_shuffle(\@all_tests);
+}
+
+if (get_env("POT_SKIP_NUM_TESTS_IN_TEN")) {
+    @tests_to_run = ();
+
+    #Needs to be random for the skipping to skip different tests each time
+    fisher_yates_shuffle(\@all_tests);
+
+    my $counter = 1;
+    for my $test (@all_tests) {
+        if ( $test->{should_run} != 1 ) {
+            next;
+        }
+        if ( $test->{force_include_when_skipping} ) {
+            push(@tests_to_run, $test);
+            $counter++;
+            next;
+        }
+        if ($counter > get_env("POT_SKIP_NUM_TESTS_IN_TEN")){
+            push(@tests_to_run, $test);
+        }
+        $counter++;
+        if ($counter > 10) {
+            $counter = 1;
+        }
+    }
+}
 
 my @truncated_tests_to_run = ();
 
@@ -79,14 +158,14 @@ plan( tests => $NUM_TESTS_PER_BROWSER * scalar(@browsers_to_test) );
 # start up the Selenium server in java
 # send both STDOUT and STDERR to files so no 'clutter' messages appear
 # in the console, but you're able to see what happened, if necessary.
-if (! $ENV{POT_SELENIUM_SERVER_STARTED_EXTERNALLY} ) {
+if (! get_env("POT_SELENIUM_SERVER_STARTED_EXTERNALLY") ) {
     # [tag:hack:gem] eventually we shouldn't need this... it's just because
     # Firefox 3.5 on Ubuntu is acting a bit funny at the moment If you have a
     # selenium-firefox folder, it will use the firefox inside the folder
     # instead of the normal default firefox.
     system qq~
         cd "$SELENIUM_SERVER_DIR" ;
-        java -DfirefoxDefaultPath="/usr/bin/selenium-firefox" -jar selenium-server.jar > ./potoss_lastrun_stdout.log 2> ./potoss_lastrun_stderr.log &
+        java -DfirefoxDefaultPath="/usr/lib/firefox-3.0.14/firefox" -jar selenium-server.jar > ./potoss_lastrun_stdout.log 2> ./potoss_lastrun_stderr.log &
     ~;
 }
 
@@ -95,7 +174,7 @@ sleep 4;
 
 my $sel = undef;
 
-my $test_dir = $ENV{POT_TEST_SERVER}
+my $test_dir = get_env("POT_TEST_SERVER")
     || die "needs POT_TEST_SERVER environmental variable set";
 
 
@@ -156,7 +235,7 @@ for my $browser (@browsers_to_test) {
         do_data_cleanup();
     }
 
-    if ($ENV{POT_TEST_SERVER} eq "http_simple") {
+    if (get_env("POT_TEST_SERVER") eq "http_simple") {
         #kill the server by sending it a special command
         $sel->open( $dir . "kill_server");
     }
@@ -167,9 +246,9 @@ for my $browser (@browsers_to_test) {
 sub start_selenium_browser {
     my $browser = shift;
 
-    my $should_be_verbose = ( $ENV{POT_BE_VERBOSE} ) ? 1 : 0;
-    my $host = $ENV{POT_SELENIUM_HOST} || "localhost";
-    my $port = $ENV{POT_SELENIUM_PORT} || 4444;
+    my $should_be_verbose = ( get_env("POT_BE_VERBOSE") ) ? 1 : 0;
+    my $host = get_env("POT_SELENIUM_HOST") || "localhost";
+    my $port = get_env("POT_SELENIUM_PORT") || 4444;
 
     $sel = Test::WWW::Selenium->new(
         host        => $host,
@@ -192,7 +271,7 @@ sub stop_selenium_browser {
 #
 # gemhack 4 - it doesn't appear to work on this Linux setup, so commenting
 # out for now.
-if (! $ENV{POT_SELENIUM_SERVER_SHUTDOWN_EXTERNALLY} ) {
+if (! get_env("POT_SELENIUM_SERVER_SHUTDOWN_EXTERNALLY") ) {
     $sel && $sel->do_command("shutDownSeleniumServer");
 }
 
@@ -201,7 +280,7 @@ sub get_tests {
     return (
 {
     name => "tst_add_and_remove_a_readonly_alias",
-    numtests => 29, solo => 0, should_run => 1, is_last_test => 0,
+    numtests => 29, solo => 0, should_run => 1, is_last_test => 0, is_slow => 0, force_include_when_skipping => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -256,7 +335,7 @@ sub get_tests {
 
 {
     name => "tst_create_new_page_from_readonly_alias",
-    numtests => 8, solo => 0, should_run => 1, is_last_test => 0,
+    numtests => 8, solo => 0, should_run => 1, is_last_test => 0, is_slow => 0, force_include_when_skipping => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -282,7 +361,7 @@ sub get_tests {
 
 {
     name => "tst_recaptcha_failure",
-    numtests => 9, solo => 0, should_run => 1, is_last_test => 0,
+    numtests => 9, solo => 0, should_run => 1, is_last_test => 0, is_slow => 0, force_include_when_skipping => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -311,7 +390,7 @@ sub get_tests {
 
 {
     name => "tst_create_link_to_readonly_alias",
-    numtests => 6, solo => 0, should_run => 1, is_last_test => 0,
+    numtests => 6, solo => 0, should_run => 1, is_last_test => 0, is_slow => 0, force_include_when_skipping => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -334,7 +413,7 @@ sub get_tests {
 
 {
     name => "tst_add_remove_search_box",
-    numtests => 25, solo => 0, should_run => 1, is_last_test => 0,
+    numtests => 25, solo => 0, should_run => 1, is_last_test => 0, is_slow => 0, force_include_when_skipping => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -377,7 +456,7 @@ sub get_tests {
 
 {
     name => "tst_find_page_successfull",
-    numtests => 13, solo => 0, should_run => 1, is_last_test => 0,
+    numtests => 13, solo => 0, should_run => 1, is_last_test => 0, is_slow => 0, force_include_when_skipping => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -405,7 +484,7 @@ sub get_tests {
 
 {
     name => "tst_find_page_two_pages_match",
-    numtests => 10, solo => 0, should_run => 1, is_last_test => 0,
+    numtests => 10, solo => 0, should_run => 1, is_last_test => 0, is_slow => 0, force_include_when_skipping => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -430,7 +509,7 @@ sub get_tests {
 
 {
     name => "tst_find_page_word_too_short",
-    numtests => 10, solo => 0, should_run => 1, is_last_test => 0,
+    numtests => 10, solo => 0, should_run => 1, is_last_test => 0, is_slow => 0, force_include_when_skipping => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -454,7 +533,7 @@ sub get_tests {
 
 {
     name => "tst_find_page_word_in_dictionary",
-    numtests => 10, solo => 0, should_run => 1, is_last_test => 0,
+    numtests => 10, solo => 0, should_run => 1, is_last_test => 0, is_slow => 0, force_include_when_skipping => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -478,7 +557,7 @@ sub get_tests {
 
 {
     name => "tst_find_page_word_not_alphanumeric",
-    numtests => 10, solo => 0, should_run => 1, is_last_test => 0,
+    numtests => 10, solo => 0, should_run => 1, is_last_test => 0, is_slow => 0, force_include_when_skipping => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -503,7 +582,7 @@ sub get_tests {
 
 {
     name => "tst_find_page_not_successfull_because_hidden",
-    numtests => 39, solo => 0, should_run => 1, is_last_test => 0,
+    numtests => 39, solo => 0, should_run => 1, is_last_test => 0, is_slow => 0, force_include_when_skipping => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -566,7 +645,7 @@ sub get_tests {
 
 {
     name => "tst_try_to_edit_alias",
-    numtests => 10, solo => 0, should_run => 1, is_last_test => 0,
+    numtests => 10, solo => 0, should_run => 1, is_last_test => 0, is_slow => 0, force_include_when_skipping => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -590,7 +669,7 @@ sub get_tests {
 
 {
     name => "tst_iframe_opts_remain",
-    numtests => 12, solo => 0, should_run => 1, is_last_test => 0,
+    numtests => 12, solo => 0, should_run => 1, is_last_test => 0, is_slow => 0, force_include_when_skipping => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -620,7 +699,7 @@ sub get_tests {
 
 {
     name => "tst_changes_in_already_existing_page",
-    numtests => 15, solo => 0, should_run => 1, is_last_test => 0,
+    numtests => 15, solo => 0, should_run => 1, is_last_test => 0, is_slow => 0, force_include_when_skipping => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -649,7 +728,7 @@ sub get_tests {
 
 {
     name => "tst_create_new_page",
-    numtests => 24, solo => 0, should_run => 1, is_last_test => 0,
+    numtests => 24, solo => 0, should_run => 1, is_last_test => 0, is_slow => 0, force_include_when_skipping => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -689,7 +768,7 @@ sub get_tests {
 
 {
     name => "tst_only_one_revision",
-    numtests => 17, solo => 0, should_run => 1, is_last_test => 0,
+    numtests => 17, solo => 0, should_run => 1, is_last_test => 0, is_slow => 0, force_include_when_skipping => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -721,7 +800,7 @@ sub get_tests {
 
 {
     name => "tst_create_page_name_in_dictionary",
-    numtests => 6, solo => 0, should_run => 1, is_last_test => 0,
+    numtests => 6, solo => 0, should_run => 1, is_last_test => 0, is_slow => 0, force_include_when_skipping => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -739,7 +818,7 @@ sub get_tests {
 
 {
     name => "tst_create_page_already_exists",
-    numtests => 6, solo => 0, should_run => 1, is_last_test => 0,
+    numtests => 6, solo => 0, should_run => 1, is_last_test => 0, is_slow => 0, force_include_when_skipping => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -757,7 +836,7 @@ sub get_tests {
 
 {
     name => "tst_create_page_badly_formatted_name",
-    numtests => 7, solo => 0, should_run => 1, is_last_test => 0,
+    numtests => 7, solo => 0, should_run => 1, is_last_test => 0, is_slow => 0, force_include_when_skipping => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -776,7 +855,7 @@ sub get_tests {
 
 {
     name => "tst_encrypt_decrypt_page_content",
-    numtests => 54, solo => 0, should_run => 1, is_last_test => 0,
+    numtests => 54, solo => 0, should_run => 1, is_last_test => 0, is_slow => 1, force_include_when_skipping => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -872,7 +951,7 @@ sub get_tests {
 
 {
     name => "tst_edit_non_head_revision",
-    numtests => 16, solo => 0, should_run => 1, is_last_test => 0,
+    numtests => 16, solo => 0, should_run => 1, is_last_test => 0, is_slow => 0, force_include_when_skipping => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -905,7 +984,7 @@ sub get_tests {
 
 {
     name => "tst_create_two_way_linked_page_link_auto_created",
-    numtests => 23, solo => 0, should_run => 1, is_last_test => 0,
+    numtests => 23, solo => 0, should_run => 1, is_last_test => 0, is_slow => 0, force_include_when_skipping => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -943,7 +1022,7 @@ sub get_tests {
 
 {
     name => "tst_create_two_way_linked_page_link_not_auto_created",
-    numtests => 31, solo => 0, should_run => 1, is_last_test => 0,
+    numtests => 31, solo => 0, should_run => 1, is_last_test => 0, is_slow => 0, force_include_when_skipping => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -1000,7 +1079,7 @@ sub get_tests {
 
 {
     name => "tst_create_one_way_linked_page_link_auto_created",
-    numtests => 23, solo => 0, should_run => 1, is_last_test => 0,
+    numtests => 23, solo => 0, should_run => 1, is_last_test => 0, is_slow => 0, force_include_when_skipping => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
@@ -1041,7 +1120,7 @@ sub get_tests {
 
 {
     name => "tst_create_one_way_linked_page_link_not_auto_created",
-    numtests => 31, solo => 0, should_run => 1, is_last_test => 0,
+    numtests => 31, solo => 0, should_run => 1, is_last_test => 0, is_slow => 0, force_include_when_skipping => 0,
     code => sub {
         #-------------------------------------------------------------------------
         # Story:
