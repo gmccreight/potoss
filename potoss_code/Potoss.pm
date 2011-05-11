@@ -3323,12 +3323,24 @@ sub hprint {
     $maybe_keys_js
     $maybe_sortable_table
         <script>
+            function resetCursor(txtElement) {
+                if (txtElement.setSelectionRange) {
+                    txtElement.focus();
+                    txtElement.setSelectionRange(0, 0);
+                } else if (txtElement.createTextRange) {
+                    var range = txtElement.createTextRange();
+                    range.moveStart('character', 0);
+                    range.select();
+                }
+            }
+
             function do_onload () {
                 if ( document.getElementById('myel_blowfish_key') ) {
                     document.getElementById('myel_blowfish_key').focus();
                 }
                 else if ( document.getElementById('myel_text_area') ) {
                     document.getElementById('myel_text_area').focus();
+                    resetCursor(document.getElementById('myel_text_area'));
                 }
                 else if ( document.getElementById('myel_search_query') ) {
                     document.getElementById('myel_search_query').focus();
